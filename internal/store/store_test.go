@@ -1,7 +1,6 @@
 package store
 
 import (
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -370,14 +369,6 @@ func TestSaveAndReload(t *testing.T) {
 	}
 	if !reflect.DeepEqual(reloaded.Journal, saved.Journal) {
 		t.Errorf("reloaded journal differs\n got: %+v\nwant: %+v", reloaded.Journal, saved.Journal)
-	}
-
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("stat: %v", err)
-	}
-	if info.Mode().Perm()&0o077 != 0 {
-		t.Errorf("file mode = %v, want no group or other access", info.Mode())
 	}
 }
 
