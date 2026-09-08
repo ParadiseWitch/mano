@@ -8,7 +8,7 @@
 
 ### 下载二进制
 
-从 [Releases](../../releases) 下载对应平台的文件：
+从 [Releases](https://github.com/ParadiseWitch/mano/releases) 下载对应平台的文件：
 
 | 平台 | 文件 |
 | --- | --- |
@@ -33,7 +33,7 @@ Move-Item mano-windows-amd64.exe $HOME\bin\mano.exe
 需要 Go 1.24 或更新版本。
 
 ```sh
-git clone <repo-url> mano && cd mano
+git clone https://github.com/ParadiseWitch/mano.git && cd mano
 make build                       # 产物在 dist/mano
 cp dist/mano /usr/local/bin/     # 或任何在 PATH 里的目录
 ```
