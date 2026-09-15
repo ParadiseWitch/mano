@@ -18,37 +18,41 @@ var helpSections = []struct {
 	title   string
 	entries []helpEntry
 }{
-	{"日志页 | 选择模式", []helpEntry{
+	{"日志页 | 内容列（默认停在这里）", []helpEntry{
 		{"j / k", "下移、上移一项（上下方向键同效）"},
+		{"PgUp / PgDn", "翻页；Home / End 跳到首项、末项"},
 		{"gg", "跳到第一项"},
 		{"G", "跳到最后一项"},
 		{"数字键", "跳到对应序号；300ms 内连按可拼成多位数"},
-		{"i / a", "编辑当前项内容（光标落在开头 / 结尾）"},
-		{"o", "在下一行插入新项，开始时间填当前时间，并直接进入编辑"},
+		{"i / a", "编辑当前项内容，光标落在开头 / 结尾（Enter 同 a）"},
+		{"o", "下一行插入新项：开始为当前时间，收尾上一条未结束的，并进入编辑"},
 		{"dd", "删除当前项"},
-		{"s", "选中开始时间；缺失时先填入当前时间"},
-		{"e", "选中结束时间；缺失时先填入当前时间"},
 		{"y", "复制当前项（含内容与起止时间）"},
 		{"p", "把复制的项粘贴为最后一项并选中"},
 		{"c", "打开日期选择页"},
 		{"?", "打开本页"},
 		{"q", "退出 mano"},
 	}},
-	{"日志页 | 时间模式（s 进入开始时间，e 进入结束时间）", []helpEntry{
-		{"左右键", "在小时和分钟之间切换"},
-		{"上下键", "调整数字：小时每次加 1，分钟每次加 5"},
-		{"h / l", "同左右键（仅结束时间模式）"},
-		{"k / j", "同上下键（仅结束时间模式）"},
-		{"数字键", "直接填入，连按两位组成数值；只按一位则 1 秒后生效"},
-		{"Esc", "退出时间模式"},
+	{"日志页 | 一行的八个停靠点", []helpEntry{
+		{"h / l", "在停靠点之间移动，两端环绕（左右方向键同效）"},
+		{"停靠点", "序号 / 开始 / 结束 / 耗时 各按时、分两格，共八格，最后是内容"},
+		{"0", "跳到序号停靠点（时间列上的 0 是个数字）"},
+		{"Enter / Esc", "从其他停靠点回到内容列（在内容列上 Enter 是编辑）"},
+		{"序号列 j / k", "把当前项上移、下移一格，光标跟着走（↑ 或 k 上移）"},
+		{"时间列 j / k", "加减数值：时 ±1、分 ±5，到边界绕回（↑ 或 k 加）"},
+		{"时间列数字键", "滚动填入：先十位后个位，两位满一个数值"},
+		{"", "装不进时钟的那一位直接丢弃，不换手，也没有计时"},
+		{"时间列 .", "把当前时间填进开始或结束时间"},
+		{"耗时列 j / k", "加减与填数字都写回结束时间，需要先有开始时间"},
+		{"行命令", "i a o dd y p c G ? q 在任何停靠点上都能按"},
 	}},
 	{"日志页 | 编辑模式", []helpEntry{
 		{"左右键", "移动光标"},
 		{"Backspace", "删除光标前一个字符"},
-		{"Enter / Esc", "提交并回到选择模式"},
+		{"Enter / Esc", "提交并回到内容列"},
 	}},
 	{"日期选择页", []helpEntry{
-		{"j / k", "上移、下移一个日期（上下方向键同效）"},
+		{"j / k", "下移、上移一个日期（上下方向键同效）"},
 		{"h / l", "上一页、下一页（左右方向键同效）"},
 		{"/", "开始搜索，边输入边过滤"},
 		{"Enter", "打开选中的日期"},
@@ -66,7 +70,7 @@ var helpSections = []struct {
 	}},
 }
 
-const helpKeyWidth = 12
+const helpKeyWidth = 14
 
 func (a *App) updateHelp(k tea.KeyMsg) tea.Cmd {
 	a.status = ""
@@ -142,7 +146,8 @@ func (a *App) viewHelp() string {
 }
 
 func helpLines(width int) []string {
-	sectionStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214"))
+	sectionStyle := lipgloss.NewStyle().Bold(true).
+		Foreground(fg(pal.Warn)).Background(bg(pal.Canvas))
 	descWidth := width - rowMargin - helpKeyWidth - 2
 
 	var lines []string
@@ -150,13 +155,15 @@ func helpLines(width int) []string {
 		if len(lines) > 0 {
 			lines = append(lines, "")
 		}
-		lines = append(lines, strings.Repeat(" ", rowMargin)+sectionStyle.Render(fit(section.title, width-rowMargin)))
+		lines = append(lines, on(strings.Repeat(" ", rowMargin))+
+			sectionStyle.Render(fit(section.title, width-rowMargin)))
 
 		for _, entry := range section.entries {
-			key := lipgloss.NewStyle().Width(helpKeyWidth).Foreground(fgText).
+			key := lipgloss.NewStyle().Width(helpKeyWidth).
+				Foreground(fg(pal.Text)).Background(bg(pal.Canvas)).
 				Render(fit(entry.key, helpKeyWidth))
 			desc := dimStyle.Render(fit(entry.desc, descWidth))
-			lines = append(lines, strings.Repeat(" ", rowMargin)+key+"  "+desc)
+			lines = append(lines, on(strings.Repeat(" ", rowMargin))+key+on("  ")+desc)
 		}
 	}
 	return lines

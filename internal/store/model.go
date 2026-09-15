@@ -67,6 +67,23 @@ func (it Item) Duration() (time.Duration, bool) {
 	return time.Duration(end-start) * time.Minute, crossed
 }
 
+// AddDuration sets the item's end so it spans the given minutes from its start.
+// The span wraps within a day, so a duration measured past midnight lands on the
+// clock reading it would really show. It reports false when the item has no start
+// time to measure from.
+func (it *Item) AddDuration(minutes int) bool {
+	if it.Start == nil {
+		return false
+	}
+	if minutes < 0 {
+		minutes = 0
+	}
+	clock := (it.Start.minutes() + minutes) % (24 * 60)
+	end := Time{Hour: clock / 60, Minute: clock % 60}
+	it.End = &end
+	return true
+}
+
 // Clone is a deep copy: the time pointers are duplicated so editing one item
 // cannot reach through into another.
 func (it Item) Clone() Item {

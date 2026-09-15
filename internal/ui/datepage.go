@@ -280,34 +280,41 @@ func (a *App) renderDateRow(i int) string {
 	date := d.dates[d.matches[i]]
 	selected := i == d.cursor
 
+	// A date is read as plain text, so the only ground in the list belongs to the
+	// row the cursor is on — and every stretch of that row has to be painted on
+	// it, or the gaps would punch canvas-coloured holes in the panel.
+	ground := bg(pal.Canvas)
+	if selected {
+		ground = bg(pal.Row)
+	}
+
 	marker := "  "
 	if selected {
-		marker = warnStyle.Render("> ")
+		marker = "> "
 	}
 
-	fg, bg := fgText, bgBlock
+	dateFG, countFG := fg(pal.Text), fg(pal.Dim)
 	if selected {
-		fg, bg = fgBright, bgSelect
+		dateFG, countFG = fg(pal.Selected), fg(pal.Title)
 	}
 
-	count := d.counts[date]
-	countText := dimStyle.Render(fmt.Sprintf("%3d 项", count))
-	if selected {
-		countText = lipgloss.NewStyle().Foreground(fgBright).Render(fmt.Sprintf("%3d 项", count))
-	}
+	gap := run(" ", fg(pal.Text), ground)
+	countText := cell(fmt.Sprintf("%3d 项", d.counts[date]), 6, lipgloss.Right, countFG, ground)
 	if date == store.Today() {
-		countText += " " + warnStyle.Render("今天")
+		countText += gap + run("今天", fg(pal.Warn), ground)
 	}
 
-	row := strings.Repeat(" ", rowMargin) + marker + lipgloss.JoinHorizontal(lipgloss.Top,
-		cell(date, 10, lipgloss.Left, fg, bg),
-		" ",
-		cell(store.Weekday(date), 4, lipgloss.Left, fgDim, bgBlock),
-		" ",
-		countText,
-	)
+	row := run(strings.Repeat(" ", rowMargin), fg(pal.Text), ground) +
+		run(marker, fg(pal.Warn), ground) +
+		lipgloss.JoinHorizontal(lipgloss.Top,
+			cell(date, 10, lipgloss.Left, dateFG, ground),
+			gap,
+			cell(store.Weekday(date), 4, lipgloss.Left, fg(pal.Dim), ground),
+			gap,
+			countText,
+		)
 
-	return lipgloss.NewStyle().MaxWidth(a.width).Render(row)
+	return cut(row, a.width)
 }
 
 func (a *App) renderDateStatus() string {

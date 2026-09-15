@@ -115,14 +115,18 @@ func TestDigitsRestartAfterWindow(t *testing.T) {
 	}
 }
 
-func TestZeroLeadingDigits(t *testing.T) {
+func TestZeroLeadsNoNumber(t *testing.T) {
 	var m Machine
 
-	if got := m.Feed(char('0'), t0); got.Kind != Jump || got.Target != 0 {
-		t.Errorf("lone 0 = %+v, want Jump 0 for the caller to ignore", got)
+	// A lone 0 belongs to the UI, which reads it as "go to the index column".
+	if got := m.Feed(char('0'), t0); got.Kind != Pass {
+		t.Errorf("lone 0 = %+v, want Pass", got)
 	}
-	if got := m.Feed(char('5'), t0.Add(50*time.Millisecond)); got.Target != 5 {
-		t.Errorf("05 = %+v, want Jump 5", got)
+
+	// Once digits are in flight, 0 is one of them again.
+	m.Feed(char('1'), t0)
+	if got := m.Feed(char('0'), t0.Add(50*time.Millisecond)); got.Kind != Jump || got.Target != 10 {
+		t.Errorf("1 then 0 = %+v, want Jump 10", got)
 	}
 }
 
@@ -163,60 +167,6 @@ func TestResetClearsBothSequences(t *testing.T) {
 	}
 	if got := m.Feed(char('g'), t0.Add(2*time.Millisecond)); got.Kind != Nothing {
 		t.Errorf("g after Reset = %v, want Nothing", got.Kind)
-	}
-}
-
-func TestTimeEntryTwoDigits(t *testing.T) {
-	e := NewTimeEntry()
-
-	if v, done := e.Digit(1, t0); v != 1 || done {
-		t.Errorf("first digit = %d, %v; want 1, false", v, done)
-	}
-	if p := e.Provisional(t0.Add(100 * time.Millisecond)); p != 1 {
-		t.Errorf("Provisional = %d, want 1", p)
-	}
-	if w := e.Pending(t0.Add(100 * time.Millisecond)); w != TimeDigitTimeout-100*time.Millisecond {
-		t.Errorf("Pending = %v, want %v", w, TimeDigitTimeout-100*time.Millisecond)
-	}
-	if v, done := e.Digit(5, t0.Add(200*time.Millisecond)); v != 15 || !done {
-		t.Errorf("second digit = %d, %v; want 15, true", v, done)
-	}
-	if p := e.Provisional(t0.Add(300 * time.Millisecond)); p != -1 {
-		t.Errorf("Provisional after completion = %d, want -1", p)
-	}
-}
-
-func TestTimeEntryFlushesLoneDigit(t *testing.T) {
-	e := NewTimeEntry()
-	e.Digit(9, t0)
-
-	if v, ok := e.Flush(t0.Add(TimeDigitTimeout / 2)); ok {
-		t.Errorf("Flush inside the window = %d, %v; want not ok", v, ok)
-	}
-	if v, ok := e.Flush(t0.Add(TimeDigitTimeout + time.Millisecond)); v != 9 || !ok {
-		t.Errorf("Flush after the window = %d, %v; want 9, true", v, ok)
-	}
-	if p := e.Provisional(t0.Add(TimeDigitTimeout + 2*time.Millisecond)); p != -1 {
-		t.Errorf("Provisional after expiry = %d, want -1", p)
-	}
-	if v, ok := e.Flush(t0.Add(2 * TimeDigitTimeout)); ok {
-		t.Errorf("second Flush = %d, %v; want not ok", v, ok)
-	}
-}
-
-func TestTimeEntryResets(t *testing.T) {
-	e := NewTimeEntry()
-	e.Digit(2, t0)
-	e.Reset()
-
-	if p := e.Provisional(t0.Add(time.Millisecond)); p != -1 {
-		t.Errorf("Provisional after Reset = %d, want -1", p)
-	}
-	if w := e.Pending(t0.Add(time.Millisecond)); w != 0 {
-		t.Errorf("Pending after Reset = %v, want 0", w)
-	}
-	if v, done := e.Digit(3, t0.Add(2*time.Millisecond)); v != 3 || done {
-		t.Errorf("digit after Reset = %d, %v; want 3, false", v, done)
 	}
 }
 

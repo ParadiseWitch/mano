@@ -16,6 +16,9 @@ dist: build build-windows
 run: build
 	./$(BIN)
 
+run-windows: build-windows
+	./$(WIN)
+
 test:
 	go test ./...
 

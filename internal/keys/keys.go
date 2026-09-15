@@ -12,8 +12,6 @@ const (
 	PrefixTimeout = 800 * time.Millisecond
 	// DigitTimeout is how long a typed digit waits to be joined into a longer number.
 	DigitTimeout = 300 * time.Millisecond
-	// TimeDigitTimeout is how long the first digit of a two-digit time entry waits.
-	TimeDigitTimeout = time.Second
 )
 
 // EventKind tells the caller what a key press resolved to.
@@ -52,13 +50,14 @@ type Machine struct {
 
 // Feed interprets one key press. A digit jumps immediately and keeps listening
 // for a second digit to widen the target, so reaching item 12 costs no delay on
-// the way to item 1.
+// the way to item 1. A leading 0 is left alone: no item is number 0, and the UI
+// wants that key for itself.
 func (m *Machine) Feed(k tea.KeyMsg, now time.Time) Event {
 	m.expire(now)
 
 	if r, ok := SingleRune(k); ok {
 		switch {
-		case r >= '0' && r <= '9':
+		case r >= '1' && r <= '9', r == '0' && m.digits != "":
 			if m.digits == "" {
 				m.digits = string(r)
 			} else {
@@ -142,55 +141,3 @@ func SingleRune(k tea.KeyMsg) (rune, bool) {
 	}
 	return k.Runes[0], true
 }
-
-// TimeEntry collects the two digits of an hour or minute field.
-type TimeEntry struct {
-	first int
-	at    time.Time
-}
-
-// Digit takes a typed 0-9. It reports the resolved value and whether entry is
-// finished: a second digit completes immediately, a first one only shows a
-// provisional value until Flush or the timeout lands.
-func (t *TimeEntry) Digit(d int, now time.Time) (value int, done bool) {
-	if t.first < 0 {
-		t.first, t.at = d, now
-		return d, false
-	}
-	value, t.first = t.first*10+d, -1
-	return value, true
-}
-
-// Flush commits a lone first digit once its timeout has passed.
-func (t *TimeEntry) Flush(now time.Time) (value int, ok bool) {
-	if t.first < 0 || now.Sub(t.at) <= TimeDigitTimeout {
-		return 0, false
-	}
-	value, t.first = t.first, -1
-	return value, true
-}
-
-// Provisional is the half-typed digit, or -1.
-func (t *TimeEntry) Provisional(now time.Time) int {
-	if t.first < 0 || now.Sub(t.at) > TimeDigitTimeout {
-		return -1
-	}
-	return t.first
-}
-
-// Pending is the wait left on a half-typed digit.
-func (t *TimeEntry) Pending(now time.Time) time.Duration {
-	if t.first < 0 {
-		return 0
-	}
-	if remain := TimeDigitTimeout - now.Sub(t.at); remain > 0 {
-		return remain
-	}
-	return 0
-}
-
-// Reset abandons a half-typed digit.
-func (t *TimeEntry) Reset() { t.first = -1 }
-
-// NewTimeEntry is an idle TimeEntry.
-func NewTimeEntry() TimeEntry { return TimeEntry{first: -1} }

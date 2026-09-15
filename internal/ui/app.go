@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"mano/internal/config"
 	"mano/internal/store"
 )
 
@@ -40,14 +41,18 @@ type App struct {
 	helpOffset int
 }
 
-// New builds an app showing date on the log page.
-func New(s *store.Store, date string) *App {
+// New builds an app showing date on the log page. colors is the palette to draw
+// with; notice, when not empty, is the first status line — the config package
+// uses it to report a malformed settings file without refusing to start.
+func New(s *store.Store, date string, colors config.Colors, notice string) *App {
+	apply(colors)
 	return &App{
-		store: s,
-		page:  pageLog,
-		date:  date,
-		log:   newLogState(),
-		dates: newDateState(),
+		store:  s,
+		page:   pageLog,
+		date:   date,
+		status: notice,
+		log:    newLogState(),
+		dates:  newDateState(),
 	}
 }
 
@@ -79,7 +84,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Anything else — a cursor blink — belongs to whichever input has focus.
-	if a.page == pageLog && a.log.mode == modeEdit {
+	if a.page == pageLog && a.log.editing {
 		var cmd tea.Cmd
 		a.log.editor, cmd = a.log.editor.Update(msg)
 		return a, cmd
@@ -96,14 +101,17 @@ func (a *App) View() string {
 	if a.width == 0 {
 		return "正在启动"
 	}
+
+	var frame string
 	switch a.page {
 	case pageDates:
-		return a.viewDates()
+		frame = a.viewDates()
 	case pageHelp:
-		return a.viewHelp()
+		frame = a.viewHelp()
 	default:
-		return a.viewLog()
+		frame = a.viewLog()
 	}
+	return canvas(frame, a.width, a.height)
 }
 
 func (a *App) journal() *store.Journal { return &a.store.Journal }
