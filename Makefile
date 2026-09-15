@@ -1,15 +1,17 @@
 BIN := dist/mano
 WIN := dist/mano-windows-amd64.exe
+VERSION ?= devel
+LDFLAGS := -ldflags "-X main.version=$(VERSION)"
 
 .PHONY: all build build-windows dist run test fmt vet tidy clean
 
 all: build
 
 build:
-	go build -o $(BIN) .
+	go build $(LDFLAGS) -o $(BIN) .
 
 build-windows:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o $(WIN) .
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(WIN) .
 
 dist: build build-windows
 

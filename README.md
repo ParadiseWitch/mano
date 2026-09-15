@@ -6,6 +6,22 @@
 
 ## 安装
 
+### 脚本安装
+
+macOS / Linux：
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ParadiseWitch/mano/main/install.sh | bash
+```
+
+Windows PowerShell：
+
+```powershell
+irm https://raw.githubusercontent.com/ParadiseWitch/mano/main/install.ps1 | iex
+```
+
+脚本会检测平台、下载对应二进制并校验 sha256，默认装最新 Release（`MANO_VERSION=v0.1.0` 可指定版本）。
+
 ### 下载二进制
 
 从 [Releases](https://github.com/ParadiseWitch/mano/releases) 下载对应平台的文件：
@@ -13,6 +29,9 @@
 | 平台 | 文件 |
 | --- | --- |
 | macOS (Apple Silicon) | `mano-darwin-arm64` |
+| macOS (Intel) | `mano-darwin-amd64` |
+| Linux x64 | `mano-linux-amd64` |
+| Linux arm64 | `mano-linux-arm64` |
 | Windows x64 | `mano-windows-amd64.exe` |
 
 macOS：
@@ -43,6 +62,18 @@ cp dist/mano /usr/local/bin/     # 或任何在 PATH 里的目录
 ```sh
 make build-windows   # 产物在 dist/mano-windows-amd64.exe
 ```
+
+### 更新与卸载
+
+装好之后：
+
+```sh
+mano version      # 打印版本号
+mano update       # 检查最新 Release，下载校验后替换自身
+mano uninstall    # 删除 mano 本体（会先确认；日志与配置保留）
+```
+
+`update` 只替换二进制本身，不碰数据；Windows 上被占用的旧文件改名后由后台进程清理。手动从源码构建的二进制版本号是 `devel`，`update` 会把它升到最新 Release。
 
 ## 运行
 
@@ -262,15 +293,16 @@ make dist    # 同时构建本机版和 Windows 版
 make clean   # 删掉 dist/
 ```
 
-测试覆盖数据层（解析、序列化、往返一致、原子写）、配色文件（两套内置主题各自完整、模板与读回一致、单个颜色盖过主题、没有的主题名退回默认并报出行号、坏行不拖累好行）、按键状态机（`gg` / `dd` 前缀、数字跳转）和日志页的八个停靠点（绕着行走一圈、加减与绕回、滚动填入数字与拒绝越界、挪动条目、每次改动落盘、底栏提示的措辞与宽度）。终端里的实际观感仍需手工看。
+测试覆盖数据层（解析、序列化、往返一致、原子写）、配色文件（两套内置主题各自完整、模板与读回一致、单个颜色盖过主题、没有的主题名退回默认并报出行号、坏行不拖累好行）、按键状态机（`gg` / `dd` 前缀、数字跳转）、自更新与卸载（版本号解析、sha256 校验、坏包拒绝替换、原地替换、确认与取消）和日志页的八个停靠点（绕着行走一圈、加减与绕回、滚动填入数字与拒绝越界、挪动条目、每次改动落盘、底栏提示的措辞与宽度）。终端里的实际观感仍需手工看。
 
 代码结构：
 
 ```
-main.go                  命令行入口，读主题与配色
+main.go                  命令行入口，子命令分发，读主题与配色
 internal/config/         配色：两套内置主题、文件模板、容错读取
 internal/store/          数据层：模型、Markdown 解析与序列化、原子写
 internal/keys/           多键序列状态机，不依赖 bubbletea，可单测
+internal/selfupdate/     update / uninstall：查版本、下载校验、原地替换自身
 internal/ui/             三个页面的渲染与按键处理
 ```
 
@@ -278,7 +310,7 @@ internal/ui/             三个页面的渲染与按键处理
 
 `.github/workflows/ci.yml`：推到 `main` 或开 PR 时，在 ubuntu / macos / windows 上跑 `gofmt`、`go vet`、`go test` 和构建。
 
-`.github/workflows/release.yml`：推 `v*` 形式的 tag 时，跑完测试、交叉编译 macOS arm64 与 Windows amd64，再用 `gh` 建一个 Release 并把两个产物传上去。
+`.github/workflows/release.yml`：推 `v*` 形式的 tag 时，跑完测试、交叉编译 macOS / Linux（arm64 与 x64）与 Windows x64 共五个产物，连同 `checksums.txt` 一起用 `gh` 建一个 Release 传上去，供安装脚本和手动下载使用。
 
 ```sh
 git tag v0.1.0

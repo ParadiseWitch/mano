@@ -4,15 +4,25 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"mano/internal/config"
+	"mano/internal/selfupdate"
 	"mano/internal/store"
 	"mano/internal/ui"
 )
 
+// version 由 release.yml 用 -ldflags -X main.version=... 注入。
+var version = "devel"
+
 func main() {
+	if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
+		subcommand()
+		return
+	}
+
 	file := flag.String("file", "", "日志文件路径（默认 ~/.mano/mano.md）")
 	date := flag.String("date", "", "打开指定日期，写作 20260801 或 2026-08-01（默认今天）")
 	flag.Parse()
@@ -70,4 +80,46 @@ func palette() (config.Colors, string) {
 func fail(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, "mano: "+format+"\n", args...)
 	os.Exit(1)
+}
+
+// subcommand 处理 version / update / uninstall，跑完即退出，不进界面。
+func subcommand() {
+	name, args := os.Args[1], os.Args[2:]
+	switch name {
+	case "version":
+		fmt.Println(version)
+	case "update":
+		rejectArgs(name, args)
+		self, err := selfupdate.SelfPath()
+		if err != nil {
+			fail("找不到 mano 自己的位置：%v", err)
+		}
+		if err := selfupdate.Update(version, self, os.Stdout); err != nil {
+			fail("%v", err)
+		}
+	case "uninstall":
+		yes := false
+		for _, a := range args {
+			if a == "-y" || a == "--yes" {
+				yes = true
+			} else {
+				rejectArgs(name, args)
+			}
+		}
+		self, err := selfupdate.SelfPath()
+		if err != nil {
+			fail("找不到 mano 自己的位置：%v", err)
+		}
+		if err := selfupdate.Uninstall(self, yes, os.Stdin, os.Stdout); err != nil {
+			fail("%v", err)
+		}
+	default:
+		fail("未知子命令 %q，可用：version、update、uninstall", name)
+	}
+}
+
+func rejectArgs(name string, args []string) {
+	if len(args) > 0 {
+		fail("mano %s 不接受参数：%v", name, args)
+	}
 }
