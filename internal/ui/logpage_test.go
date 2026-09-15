@@ -81,11 +81,12 @@ func typed(s string) []stroke {
 	return out
 }
 
-// taps presses the same character n times.
-func taps(r rune, n int) []stroke {
+// presses holds one named key down n times, for the keys that walk or step a
+// number instead of typing a character.
+func presses(name tea.KeyType, n int) []stroke {
 	out := make([]stroke, n)
 	for i := range out {
-		out[i] = ch(r)
+		out[i] = kt(name)
 	}
 	return out
 }
@@ -116,20 +117,21 @@ func send(t *testing.T, a *App, keys ...stroke) tea.Cmd {
 }
 
 // park walks the row cursor onto one stop with the keys a user would press —
-// the shorter way round the ring in h or l — rather than assigning the stop.
-// Every test that parks therefore also proves the ring is walked the way it is
-// drawn, and a stopped cursor that arrived by some other route is caught here.
+// the shorter way round the ring in Tab or shift+Tab — rather than assigning the
+// stop. Every test that parks therefore also proves the ring is walked the way it
+// is drawn, and a stopped cursor that arrived by some other route is caught here.
 func park(t *testing.T, a *App, stop int) {
 	t.Helper()
 
 	on := a.log.field
+	forward, back := wrap(stop-on, stopCount), wrap(on-stop, stopCount)
 	switch {
 	case on == stop:
 		return
-	case wrap(on-stop, stopCount) < wrap(stop-on, stopCount):
-		send(t, a, taps('h', wrap(on-stop, stopCount))...)
+	case back < forward:
+		send(t, a, presses(tea.KeyShiftTab, back)...)
 	default:
-		send(t, a, taps('l', wrap(stop-on, stopCount))...)
+		send(t, a, presses(tea.KeyTab, forward)...)
 	}
 
 	if a.log.field != stop {
@@ -292,29 +294,33 @@ func TestStopsAreNumberedAsTheModelAssumes(t *testing.T) {
 
 // TestStopsFormARing starts every case on a fresh page, where the cursor sits on
 // the content stop, and touches only keys a user touches. Nothing here parks: a
-// press of l has to land one stop forward on its own, because the cases that
-// would otherwise agree in both directions do not exist in this table.
+// press of Tab has to land one stop forward on its own, because the cases that
+// would otherwise agree in both directions do not exist in this table. The keys
+// the redesign retired are covered by the last case: they must move nothing.
 func TestStopsFormARing(t *testing.T) {
 	cases := []struct {
 		name string
 		keys []stroke
 		want int
 	}{
-		{"l from the content stop reaches the index", typed("l"), fIndex},
-		{"h from the content stop backs into the duration", typed("h"), fDurMinute},
-		{"right arrow walks forward", []stroke{kt(tea.KeyRight)}, fIndex},
-		{"left arrow walks back", []stroke{kt(tea.KeyLeft)}, fDurMinute},
-		{"one l past the index is the start hour", typed("ll"), fStartHour},
-		{"one h past the duration minute is the duration hour", typed("hh"), fDurHour},
-		{"seven l's run down to the duration minute", typed("lllllll"), fDurMinute},
-		{"an eighth l completes the lap", typed("llllllll"), fContent},
-		{"eight h's also complete the lap", typed("hhhhhhhh"), fContent},
-		{"h undoes l", typed("lh"), fContent},
-		{"l undoes h", typed("hl"), fContent},
+		{"tab from the content stop reaches the index", []stroke{kt(tea.KeyTab)}, fIndex},
+		{"shift+tab from the content stop backs into the duration minute", []stroke{kt(tea.KeyShiftTab)}, fDurMinute},
+		{"one tab past the index is the start hour", presses(tea.KeyTab, 2), fStartHour},
+		{"one shift+tab past the duration minute is the duration hour", presses(tea.KeyShiftTab, 2), fDurHour},
+		{"seven tabs run down to the duration minute", presses(tea.KeyTab, 7), fDurMinute},
+		{"an eighth tab completes the lap", presses(tea.KeyTab, 8), fContent},
+		{"eight shift+tabs also complete the lap", presses(tea.KeyShiftTab, 8), fContent},
+		{"shift+tab undoes tab", []stroke{kt(tea.KeyTab), kt(tea.KeyShiftTab)}, fContent},
+		{"tab undoes shift+tab", []stroke{kt(tea.KeyShiftTab), kt(tea.KeyTab)}, fContent},
 		{"0 picks the index stop from the content stop", typed("0"), fIndex},
 		{"0 on the index stop stays on it", typed("00"), fIndex},
-		{"Esc off a stop returns to the content", append(typed("ll"), kt(tea.KeyEsc)), fContent},
-		{"Enter off a stop returns to the content", append(typed("hh"), kt(tea.KeyEnter)), fContent},
+		{"Esc off a stop returns to the content", append(presses(tea.KeyTab, 2), kt(tea.KeyEsc)), fContent},
+		{"Enter off a stop returns to the content", append(presses(tea.KeyShiftTab, 2), kt(tea.KeyEnter)), fContent},
+		{"h no longer walks the row", typed("h"), fContent},
+		{"l no longer walks the row", typed("l"), fContent},
+		{"the left arrow no longer walks the row", []stroke{kt(tea.KeyLeft)}, fContent},
+		{"the right arrow no longer walks the row", []stroke{kt(tea.KeyRight)}, fContent},
+		{"h and l together move nothing", typed("hl"), fContent},
 	}
 
 	for _, c := range cases {
@@ -339,22 +345,22 @@ func TestStopsFormARing(t *testing.T) {
 		order := []int{fIndex, fStartHour, fStartMinute, fEndHour, fEndMinute, fDurHour, fDurMinute, fContent}
 
 		for i, stop := range order {
-			send(t, a, ch('l'))
+			send(t, a, kt(tea.KeyTab))
 			if a.log.field != stop {
-				t.Fatalf("press %d of l: cursor on %s, want %s",
+				t.Fatalf("press %d of Tab: cursor on %s, want %s",
 					i+1, stopNames[a.log.field], stopNames[stop])
 			}
 		}
 		for i := len(order) - 2; i >= 0; i-- {
-			send(t, a, ch('h'))
+			send(t, a, kt(tea.KeyShiftTab))
 			if a.log.field != order[i] {
-				t.Fatalf("press %d of h: cursor on %s, want %s",
+				t.Fatalf("press %d of shift+Tab: cursor on %s, want %s",
 					len(order)-1-i, stopNames[a.log.field], stopNames[order[i]])
 			}
 		}
-		send(t, a, ch('h'))
+		send(t, a, kt(tea.KeyShiftTab))
 		if a.log.field != fContent {
-			t.Errorf("one h past the index stop: cursor on %s, want it to wrap to the content stop",
+			t.Errorf("one shift+Tab past the index stop: cursor on %s, want it to wrap to the content stop",
 				stopNames[a.log.field])
 		}
 	})
@@ -488,17 +494,57 @@ func TestUpDownAtTheContentStopMoveTheRowCursor(t *testing.T) {
 	}
 }
 
-func TestUpDownAtTheIndexStopReorderTheItem(t *testing.T) {
-	movedUp := []string{
-		`"乙" start=11:00 end=12:00 dur=01h00m`,
+// TestUpDownAtTheIndexStopMoveTheRowCursor covers the arrows on the stop that
+// shows the number: a position is not a number to step, so ↑ and ↓ walk the list
+// exactly as they do from the content stop, and the item itself stays put.
+func TestUpDownAtTheIndexStopMoveTheRowCursor(t *testing.T) {
+	untouched := []string{
 		`"甲" start=09:00 end=10:00 dur=01h00m`,
-		`"丙" start=13:00 end=14:00 dur=01h00m`,
-	}
-	movedDown := []string{
-		`"甲" start=09:00 end=10:00 dur=01h00m`,
-		`"丙" start=13:00 end=14:00 dur=01h00m`,
 		`"乙" start=11:00 end=12:00 dur=01h00m`,
 	}
+
+	cases := []struct {
+		name       string
+		cursor     int
+		keys       []stroke
+		wantCursor int
+	}{
+		{"down walks to the next row", 0, []stroke{kt(tea.KeyDown)}, 1},
+		{"up walks back", 1, []stroke{kt(tea.KeyUp)}, 0},
+		{"up on the first row stays put", 0, []stroke{kt(tea.KeyUp)}, 0},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			a := startLog(t, rowOf("甲", "09:00", "10:00"), rowOf("乙", "11:00", "12:00"))
+			a.log.cursor = c.cursor
+			park(t, a, fIndex)
+
+			send(t, a, c.keys...)
+
+			if a.log.cursor != c.wantCursor {
+				t.Errorf("cursor = %d, want %d", a.log.cursor, c.wantCursor)
+			}
+			if a.log.field != fIndex {
+				t.Errorf("cursor on %s, want it to stay on the index stop", stopNames[a.log.field])
+			}
+			wantRows(t, a, untouched...)
+		})
+	}
+}
+
+// TestJKCarryTheItemWhereverTheCursorStands covers the pair that moves the item
+// itself. j and k only walk the cursor; J and K take the item the cursor is on
+// down or up the list, and the reading the cursor happens to stand on has no say
+// in it, so the pair works from every stop.
+func TestJKCarryTheItemWhereverTheCursorStands(t *testing.T) {
+	inOrder := []string{
+		`"甲" start=09:00 end=10:00 dur=01h00m`,
+		`"乙" start=11:00 end=12:00 dur=01h00m`,
+		`"丙" start=13:00 end=14:00 dur=01h00m`,
+	}
+	movedDown := []string{inOrder[0], inOrder[2], inOrder[1]}
+	movedUp := []string{inOrder[1], inOrder[0], inOrder[2]}
 
 	cases := []struct {
 		name       string
@@ -507,49 +553,59 @@ func TestUpDownAtTheIndexStopReorderTheItem(t *testing.T) {
 		wantRows   []string
 		wantCursor int
 	}{
-		{"up takes the item to the previous row", 1, []stroke{kt(tea.KeyUp)}, movedUp, 0},
-		{"k is the same key", 1, typed("k"), movedUp, 0},
-		{"down takes the item to the next row", 1, []stroke{kt(tea.KeyDown)}, movedDown, 2},
-		{"j is the same key", 1, typed("j"), movedDown, 2},
-		{"up on the first row has nowhere to go", 0, []stroke{kt(tea.KeyUp)}, []string{
-			`"甲" start=09:00 end=10:00 dur=01h00m`,
-			`"乙" start=11:00 end=12:00 dur=01h00m`,
-			`"丙" start=13:00 end=14:00 dur=01h00m`,
-		}, 0},
-		{"down on the last row has nowhere to go", 2, []stroke{kt(tea.KeyDown)}, []string{
-			`"甲" start=09:00 end=10:00 dur=01h00m`,
-			`"乙" start=11:00 end=12:00 dur=01h00m`,
-			`"丙" start=13:00 end=14:00 dur=01h00m`,
-		}, 2},
+		{"J takes the item to the next row", 1, typed("J"), movedDown, 2},
+		{"K takes the item to the previous row", 1, typed("K"), movedUp, 0},
+		{"J on the last row has nowhere to go", 2, typed("J"), inOrder, 2},
+		{"K on the first row has nowhere to go", 0, typed("K"), inOrder, 0},
 	}
 
 	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			a := startLog(t,
-				rowOf("甲", "09:00", "10:00"),
-				rowOf("乙", "11:00", "12:00"),
-				rowOf("丙", "13:00", "14:00"),
-			)
-			a.log.cursor = c.cursor
-			park(t, a, fIndex)
+		for stop := 0; stop < stopCount; stop++ {
+			t.Run(c.name+" on "+stopNames[stop], func(t *testing.T) {
+				a := startLog(t,
+					rowOf("甲", "09:00", "10:00"),
+					rowOf("乙", "11:00", "12:00"),
+					rowOf("丙", "13:00", "14:00"),
+				)
+				a.log.cursor = c.cursor
+				park(t, a, stop)
 
-			send(t, a, c.keys...)
+				send(t, a, c.keys...)
 
-			wantRows(t, a, c.wantRows...)
-			if a.log.cursor != c.wantCursor {
-				t.Errorf("cursor = %d, want %d: the cursor follows the item it moved", a.log.cursor, c.wantCursor)
-			}
-			if a.log.field != fIndex {
-				t.Errorf("cursor on %s, want it to stay on the index stop", stopNames[a.log.field])
-			}
-		})
+				wantRows(t, a, c.wantRows...)
+				if a.log.cursor != c.wantCursor {
+					t.Errorf("cursor = %d, want %d: the cursor follows the item it moved", a.log.cursor, c.wantCursor)
+				}
+				if a.log.field != stop {
+					t.Errorf("cursor on %s, want it to stay on %s", stopNames[a.log.field], stopNames[stop])
+				}
+			})
+		}
 	}
 }
 
-// TestClockStopsStep pins what one press of each key does to the number under
+// TestJKLeaveTheReadingsAlone is the other half of the rule: carrying an item
+// about moves the whole row, so the clocks travel with it and no number in the
+// two rows involved is rewritten.
+func TestJKLeaveTheReadingsAlone(t *testing.T) {
+	a := startLog(t, rowOf("甲", "09:00", "10:00"), rowOf("乙", "11:00", "12:00"))
+	a.log.cursor = 0
+	park(t, a, fEndMinute)
+
+	send(t, a, typed("J")...)
+
+	wantRows(t, a,
+		`"乙" start=11:00 end=12:00 dur=01h00m`,
+		`"甲" start=09:00 end=10:00 dur=01h00m`)
+	if a.log.cursor != 1 {
+		t.Errorf("cursor = %d, want it to follow the item to row 2", a.log.cursor)
+	}
+}
+
+// TestClockStopsStep pins what one press of an arrow does to the number under
 // the cursor. Every case is one direction only, and the wrap cases use a press
-// count whose answer the other key would not give, so swapping ↑ for ↓ or k for
-// j cannot pass by landing where the inverse would.
+// count whose answer the other key would not give, so swapping ↑ for ↓ cannot
+// pass by landing where the inverse would.
 func TestClockStopsStep(t *testing.T) {
 	cases := []struct {
 		name string
@@ -559,41 +615,33 @@ func TestClockStopsStep(t *testing.T) {
 	}{
 		{"up adds an hour", fStartHour, []stroke{kt(tea.KeyUp)},
 			[]string{`"" start=10:00 end=12:00 dur=02h00m`}},
-		{"k adds an hour", fStartHour, typed("k"),
-			[]string{`"" start=10:00 end=12:00 dur=02h00m`}},
 		{"down takes an hour off", fStartHour, []stroke{kt(tea.KeyDown)},
-			[]string{`"" start=08:00 end=12:00 dur=04h00m`}},
-		{"j takes an hour off", fStartHour, typed("j"),
 			[]string{`"" start=08:00 end=12:00 dur=04h00m`}},
 		{"up adds five minutes", fStartMinute, []stroke{kt(tea.KeyUp)},
 			[]string{`"" start=09:05 end=12:00 dur=02h55m`}},
-		{"k adds five minutes", fStartMinute, typed("k"),
-			[]string{`"" start=09:05 end=12:00 dur=02h55m`}},
 		{"down takes five minutes off without borrowing the hour", fStartMinute, []stroke{kt(tea.KeyDown)},
 			[]string{`"" start=09:55 end=12:00 dur=02h05m`}},
-		{"j takes five minutes off", fStartMinute, typed("j"),
-			[]string{`"" start=09:55 end=12:00 dur=02h05m`}},
-		{"hours climb round the clock", fStartHour, taps('k', 14),
+		{"hours climb round the clock", fStartHour, presses(tea.KeyUp, 14),
 			[]string{`"" start=23:00 end=12:00 dur=13h00m`}},
-		{"hours wrap past the top of the clock", fStartHour, taps('k', 15),
+		{"hours wrap past the top of the clock", fStartHour, presses(tea.KeyUp, 15),
 			[]string{`"" start=00:00 end=12:00 dur=12h00m`}},
-		{"hours wrap back past midnight", fStartHour, taps('j', 10),
+		{"hours wrap back past midnight", fStartHour, presses(tea.KeyDown, 10),
 			[]string{`"" start=23:00 end=12:00 dur=13h00m`}},
-		{"minutes climb round the hour", fStartMinute, taps('k', 11),
+		{"minutes climb round the hour", fStartMinute, presses(tea.KeyUp, 11),
 			[]string{`"" start=09:55 end=12:00 dur=02h05m`}},
-		{"minutes wrap past the top without carrying into the hour", fStartMinute, taps('k', 13),
+		{"minutes wrap past the top without carrying into the hour", fStartMinute, presses(tea.KeyUp, 13),
 			[]string{`"" start=09:05 end=12:00 dur=02h55m`}},
-		{"minutes wrap back past the bottom without borrowing the hour", fStartMinute, taps('j', 13),
+		{"minutes wrap back past the bottom without borrowing the hour", fStartMinute, presses(tea.KeyDown, 13),
 			[]string{`"" start=09:55 end=12:00 dur=02h05m`}},
 		{"the end hour stop moves the end up", fEndHour, []stroke{kt(tea.KeyUp)},
 			[]string{`"" start=09:00 end=13:00 dur=04h00m`}},
-		{"the end hour stop moves the end down", fEndHour, typed("j"),
+		{"the end hour stop moves the end down", fEndHour, []stroke{kt(tea.KeyDown)},
 			[]string{`"" start=09:00 end=11:00 dur=02h00m`}},
 		{"the end minute stop moves the end", fEndMinute, []stroke{kt(tea.KeyDown)},
 			[]string{`"" start=09:00 end=12:55 dur=03h55m`}},
-		{"the end minute stop moves the end up", fEndMinute, typed("k"),
+		{"the end minute stop moves the end up", fEndMinute, []stroke{kt(tea.KeyUp)},
 			[]string{`"" start=09:00 end=12:05 dur=03h05m`}},
-		{"an end run back behind the start reads as the next day", fEndHour, taps('j', 13),
+		{"an end run back behind the start reads as the next day", fEndHour, presses(tea.KeyDown, 13),
 			[]string{`"" start=09:00 end=23:00 dur=14h00m`}},
 	}
 
@@ -655,25 +703,21 @@ func TestDurationStopsStepTheSpan(t *testing.T) {
 	}{
 		{"up adds an hour on the span", "09:00", "09:00", fDurHour, []stroke{kt(tea.KeyUp)},
 			[]string{`"" start=09:00 end=10:00 dur=01h00m`}},
-		{"k adds an hour on the span", "09:00", "09:00", fDurHour, typed("k"),
-			[]string{`"" start=09:00 end=10:00 dur=01h00m`}},
 		{"down takes an hour off the span", "09:00", "10:00", fDurHour, []stroke{kt(tea.KeyDown)},
-			[]string{`"" start=09:00 end=09:00 dur=00h00m`}},
-		{"j takes an hour off the span", "09:00", "10:00", fDurHour, typed("j"),
 			[]string{`"" start=09:00 end=09:00 dur=00h00m`}},
 		{"five minutes on the span", "09:00", "09:00", fDurMinute, []stroke{kt(tea.KeyUp)},
 			[]string{`"" start=09:00 end=09:05 dur=00h05m`}},
 		{"five minutes off the span", "09:00", "09:05", fDurMinute, []stroke{kt(tea.KeyDown)},
 			[]string{`"" start=09:00 end=09:00 dur=00h00m`}},
-		{"taking hours off wraps the other way", "09:00", "10:00", fDurHour, taps('j', 2),
+		{"taking hours off wraps the other way", "09:00", "10:00", fDurHour, presses(tea.KeyDown, 2),
 			[]string{`"" start=09:00 end=08:00 dur=23h00m`}},
-		{"minutes wrap without carrying into the hour", "09:00", "09:00", fDurMinute, taps('k', 13),
+		{"minutes wrap without carrying into the hour", "09:00", "09:00", fDurMinute, presses(tea.KeyUp, 13),
 			[]string{`"" start=09:00 end=09:05 dur=00h05m`}},
-		{"minutes wrap back without borrowing the hour", "09:00", "09:05", fDurMinute, taps('j', 14),
+		{"minutes wrap back without borrowing the hour", "09:00", "09:05", fDurMinute, presses(tea.KeyDown, 14),
 			[]string{`"" start=09:00 end=09:55 dur=00h55m`}},
 		{"an item with no end starts from nothing", "09:00", "", fDurHour, []stroke{kt(tea.KeyUp)},
 			[]string{`"" start=09:00 end=10:00 dur=01h00m`}},
-		{"the start is never moved", "09:00", "10:00", fDurHour, taps('k', 3),
+		{"the start is never moved", "09:00", "10:00", fDurHour, presses(tea.KeyUp, 3),
 			[]string{`"" start=09:00 end=13:00 dur=04h00m`}},
 	}
 
@@ -700,8 +744,8 @@ func TestDurationWithoutAStartIsLeftAlone(t *testing.T) {
 		keys []stroke
 	}{
 		{"stepping the hours up", fDurHour, []stroke{kt(tea.KeyUp)}},
-		{"stepping the hours down", fDurHour, typed("j")},
-		{"stepping the minutes up", fDurMinute, typed("k")},
+		{"stepping the hours down", fDurHour, []stroke{kt(tea.KeyDown)}},
+		{"stepping the minutes up", fDurMinute, []stroke{kt(tea.KeyUp)}},
 		{"stepping the minutes down", fDurMinute, []stroke{kt(tea.KeyDown)}},
 		{"the tens of a span of hours", fDurHour, typed("2")},
 		{"both halves of a span of hours", fDurHour, typed("20")},
@@ -766,7 +810,7 @@ func TestEscAndEnterLeaveAnyStop(t *testing.T) {
 	}
 }
 
-func TestDotFillsAClockStopWithNow(t *testing.T) {
+func TestSFillsAClockStopWithNow(t *testing.T) {
 	cases := []struct {
 		name      string
 		stop      int
@@ -787,7 +831,7 @@ func TestDotFillsAClockStopWithNow(t *testing.T) {
 			park(t, a, c.stop)
 
 			before := store.NowTime()
-			send(t, a, ch('.'))
+			send(t, a, ch('s'))
 			after := store.NowTime()
 
 			it := a.items()[0]
@@ -817,13 +861,13 @@ func TestDotFillsAClockStopWithNow(t *testing.T) {
 	}
 }
 
-func TestDotDoesNothingOnTheOtherStops(t *testing.T) {
+func TestSDoesNothingOnTheOtherStops(t *testing.T) {
 	for _, stop := range []int{fIndex, fDurHour, fDurMinute, fContent} {
 		t.Run(stopNames[stop], func(t *testing.T) {
 			a := startLog(t, rowOf("甲", "09:00", "10:00"))
 			park(t, a, stop)
 
-			send(t, a, ch('.'))
+			send(t, a, ch('s'))
 
 			wantRows(t, a, `"甲" start=09:00 end=10:00 dur=01h00m`)
 			if a.log.field != stop {
@@ -1076,7 +1120,7 @@ func TestArrivingAtAStopStartsAtTheTens(t *testing.T) {
 			t.Fatal("turn = the tens, want an accepted tens digit to pass it to the ones")
 		}
 
-		send(t, a, ch('l'), ch('1')) // the minute stop, from its tens
+		send(t, a, kt(tea.KeyTab), ch('1')) // the minute stop, from its tens
 		wantRows(t, a, `"甲" start=10:10 end=12:00 dur=01h50m`)
 	})
 
@@ -1084,7 +1128,7 @@ func TestArrivingAtAStopStartsAtTheTens(t *testing.T) {
 		a := startLog(t, rowOf("甲", "00:00", "12:00"))
 		park(t, a, fStartHour)
 
-		send(t, a, ch('1'), ch('l'), ch('h'), ch('2'))
+		send(t, a, ch('1'), kt(tea.KeyTab), kt(tea.KeyShiftTab), ch('2'))
 		// The hour stopped at 10 with the ones next, but standing on it again
 		// restarts at the tens, so the 2 is a ten.
 		wantRows(t, a, `"甲" start=20:00 end=12:00 dur=16h00m`)
@@ -1095,11 +1139,11 @@ func TestArrivingAtAStopStartsAtTheTens(t *testing.T) {
 		park(t, a, fStartHour)
 
 		send(t, a, typed("07")...)
-		send(t, a, ch('l'))
+		send(t, a, kt(tea.KeyTab))
 
 		wantRows(t, a, `"甲" start=07:00 end=12:00 dur=05h00m`)
 		if a.log.field != fStartMinute {
-			t.Errorf("cursor on %s, want the stop l steps to", stopNames[a.log.field])
+			t.Errorf("cursor on %s, want the stop Tab steps to", stopNames[a.log.field])
 		}
 		wantFile(t, a)
 	})
@@ -1111,9 +1155,9 @@ func TestArrivingAtAStopStartsAtTheTens(t *testing.T) {
 		}{
 			{"Esc back to the content", []stroke{kt(tea.KeyEsc)}},
 			{"Enter back to the content", []stroke{kt(tea.KeyEnter)}},
-			{"the clock key on this stop", typed(".")},
-			{"a step forward", typed("l")},
-			{"a step back", typed("h")},
+			{"the clock key on this stop", typed("s")},
+			{"a step forward", []stroke{kt(tea.KeyTab)}},
+			{"a step back", []stroke{kt(tea.KeyShiftTab)}},
 			{"opening the editor", typed("i")},
 			{"appending to the content", typed("a")},
 		}
@@ -1568,7 +1612,7 @@ func TestRowCommandsWorkFromEveryStop(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		for stop := 0; stop < stopCount; stop++ {
+		for stop := range stopCount {
 			t.Run(c.name+" on "+stopNames[stop], func(t *testing.T) {
 				a := startLog(t, rowOf("甲", "09:00", "10:00"), rowOf("乙", "11:00", "12:00"))
 				a.log.cursor = 1
@@ -1583,8 +1627,8 @@ func TestRowCommandsWorkFromEveryStop(t *testing.T) {
 }
 
 func TestRetiredAndUnboundKeysAreInert(t *testing.T) {
-	for stop := 0; stop < stopCount; stop++ {
-		for _, r := range []rune{'s', 'e', 'x', 'v', 'u', 'n'} {
+	for stop := range stopCount {
+		for _, r := range []rune{'.', 'e', 'x', 'v', 'u', 'n', 'h', 'l'} {
 			t.Run(fmt.Sprintf("%s on %s", string(r), stopNames[stop]), func(t *testing.T) {
 				a := startLog(t, rowOf("甲", "09:00", "10:00"), rowOf("乙", "11:00", "12:00"))
 				a.log.cursor = 1
@@ -1621,10 +1665,10 @@ func TestEveryMutationLandsOnDisk(t *testing.T) {
 		{"stepping an hour", fStartHour, []stroke{kt(tea.KeyUp)}},
 		{"a single typed tens digit", fStartHour, typed("1")},
 		{"typing a minute", fStartMinute, typed("30")},
-		{"stepping the span", fDurMinute, taps('k', 2)},
+		{"stepping the span", fDurMinute, presses(tea.KeyUp, 2)},
 		{"typing a span", fDurHour, typed("11")},
-		{"reordering an item", fIndex, []stroke{kt(tea.KeyDown)}},
-		{"filling a reading from the clock", fEndHour, typed(".")},
+		{"reordering an item", fIndex, typed("J")},
+		{"filling a reading from the clock", fEndHour, typed("s")},
 		{"editing the content", fContent, append(typed("a改"), kt(tea.KeyEnter))},
 		{"inserting a row", fContent, append(typed("o新"), kt(tea.KeyEnter))},
 		{"pasting a row", fContent, typed("yp")},
@@ -1674,14 +1718,14 @@ func TestTheHintBarDescribesTheStopItSitsOn(t *testing.T) {
 		stop int
 		want string
 	}{
-		{fIndex, "序号 | j/k 挪动本项（↑/k 上移） h/l 换列 Esc 回内容"},
-		{fStartHour, "开始 小时 | ↑/k 加 ↓/j 减 每次 1 循环 | 数字 十位→个位 . 现在 | Esc 回内容"},
-		{fStartMinute, "开始 分钟 | ↑/k 加 ↓/j 减 每次 5 循环 | 数字 十位→个位 . 现在 | Esc 回内容"},
-		{fEndHour, "结束 小时 | ↑/k 加 ↓/j 减 每次 1 循环 | 数字 十位→个位 . 现在 | Esc 回内容"},
-		{fEndMinute, "结束 分钟 | ↑/k 加 ↓/j 减 每次 5 循环 | 数字 十位→个位 . 现在 | Esc 回内容"},
-		{fDurHour, "耗时 小时 | ↑/k 加 ↓/j 减 每次 1 循环 | 数字 十位→个位 由起止算出 | Esc 回内容"},
-		{fDurMinute, "耗时 分钟 | ↑/k 加 ↓/j 减 每次 5 循环 | 数字 十位→个位 由起止算出 | Esc 回内容"},
-		{fContent, "内容 j/k 移动 h/l 换列 i 编辑 o 新建 0 序号 dd 删 y/p 复制 c 日期 ? 帮助 q 退出"},
+		{fIndex, "序号 j/k 换项 J/K 挪本项 Tab 换列 ? 帮助 Esc 回内容"},
+		{fStartHour, "开始 小时 | ↑ 加 ↓ 减 每次 1 循环 | 数字 十位→个位 s 现在 | Tab 换列 Esc 回内容"},
+		{fStartMinute, "开始 分钟 | ↑ 加 ↓ 减 每次 5 循环 | 数字 十位→个位 s 现在 | Tab 换列 Esc 回内容"},
+		{fEndHour, "结束 小时 | ↑ 加 ↓ 减 每次 1 循环 | 数字 十位→个位 s 现在 | Tab 换列 Esc 回内容"},
+		{fEndMinute, "结束 分钟 | ↑ 加 ↓ 减 每次 5 循环 | 数字 十位→个位 s 现在 | Tab 换列 Esc 回内容"},
+		{fDurHour, "耗时 小时 | ↑ 加 ↓ 减 每次 1 循环 | 数字 写回结束时间 | Tab 换列 Esc 回内容"},
+		{fDurMinute, "耗时 分钟 | ↑ 加 ↓ 减 每次 5 循环 | 数字 写回结束时间 | Tab 换列 Esc 回内容"},
+		{fContent, "内容 j/k 换项 J/K 挪本项 Tab 换列 i 编辑 o 新建 dd 删 y/p 复制 c 日期 q 退出"},
 	}
 
 	for _, c := range cases {
@@ -1840,7 +1884,7 @@ func TestFieldBandPicksOutTheFocusedHalf(t *testing.T) {
 func TestEveryStopKeepsTheFrameInsideTheTerminal(t *testing.T) {
 	a := startLog(t, rowOf("一段很长很长的中文内容，用来检查行尾的裁切", "09:00", "10:00"))
 
-	for stop := 0; stop < stopCount; stop++ {
+	for stop := range stopCount {
 		park(t, a, stop)
 
 		for n, line := range strings.Split(a.View(), "\n") {
@@ -1854,11 +1898,13 @@ func TestEveryStopKeepsTheFrameInsideTheTerminal(t *testing.T) {
 func TestAnEmptyDayToleratesEveryKey(t *testing.T) {
 	strokes := []stroke{
 		kt(tea.KeyUp), kt(tea.KeyDown), kt(tea.KeyEnter), kt(tea.KeyEsc),
-		ch('k'), ch('j'), ch('h'), ch('l'), ch('0'), ch('5'), ch('.'), ch('G'),
+		kt(tea.KeyTab), kt(tea.KeyShiftTab),
+		ch('k'), ch('j'), ch('K'), ch('J'), ch('h'), ch('l'),
+		ch('0'), ch('5'), ch('s'), ch('.'), ch('G'),
 		ch('i'), ch('a'), ch('y'), ch('p'), ch('g'), ch('d'),
 	}
 
-	for stop := 0; stop < stopCount; stop++ {
+	for stop := range stopCount {
 		t.Run(stopNames[stop], func(t *testing.T) {
 			a := startLog(t)
 			park(t, a, stop)

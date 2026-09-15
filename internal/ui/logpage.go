@@ -16,7 +16,7 @@ import (
 
 // A row's cursor sits on one of eight stops. The three measured columns each
 // split into an hour and a minute, so walking from the index to the content
-// costs seven presses of l.
+// costs seven presses of Tab.
 const (
 	fIndex = iota
 	fStartHour
@@ -108,37 +108,14 @@ func (a *App) updateLogContent(k tea.KeyMsg) tea.Cmd {
 // about and every row-level command lives.
 func (a *App) contentKey(k tea.KeyMsg) tea.Cmd {
 	if r, ok := keys.SingleRune(k); ok {
-		switch r {
-		case 'j':
-			a.moveItem(1)
-		case 'k':
-			a.moveItem(-1)
-		case 'h':
-			return a.stepStop(-1)
-		case 'l':
-			return a.stepStop(1)
-		case '0':
-			return a.selectStop(fIndex)
-		case 'G':
-			a.gotoItem(len(a.items()) - 1)
-		case 'i':
-			return a.enterEdit(true)
-		case 'a':
-			return a.enterEdit(false)
-		case 'o':
-			return a.insertBelow()
-		case 'y':
-			a.copyItem()
-		case 'p':
-			a.pasteItem()
-		case 'c':
-			a.openDates()
-		case 'q':
-			return tea.Quit
-		case '?':
-			a.page = pageHelp
+		if a.rowKey(r) {
+			return nil
 		}
-		return nil
+		if r == '0' {
+			return a.selectStop(fIndex)
+		}
+		cmd, _ := a.rowCommand(r)
+		return cmd
 	}
 
 	switch k.Type {
@@ -154,18 +131,67 @@ func (a *App) contentKey(k tea.KeyMsg) tea.Cmd {
 		a.gotoItem(0)
 	case tea.KeyEnd:
 		a.gotoItem(len(a.items()) - 1)
-	case tea.KeyLeft:
-		return a.stepStop(-1)
-	case tea.KeyRight:
+	case tea.KeyTab:
 		return a.stepStop(1)
+	case tea.KeyShiftTab:
+		return a.stepStop(-1)
 	case tea.KeyEnter:
 		return a.enterEdit(false)
 	}
 	return nil
 }
 
-// updateLogStop is a stop other than content: the row is fixed and the key acts
-// on the one place the cursor is on.
+// rowKey handles the four keys that move the cursor or the row it stands on.
+// They mean the same thing on every stop: j and k walk the cursor to the
+// neighbouring item, which leaves the item itself where it was, while J and K
+// carry the item the cursor is on up or down the list. Neither pair touches a
+// reading, so no key here can change a clock.
+func (a *App) rowKey(r rune) bool {
+	switch r {
+	case 'j':
+		a.moveItem(1)
+	case 'k':
+		a.moveItem(-1)
+	case 'J':
+		a.reorderItem(1)
+	case 'K':
+		a.reorderItem(-1)
+	default:
+		return false
+	}
+	return true
+}
+
+// rowCommand handles the keys that act on the item under the cursor, wherever
+// the cursor stands, and reports whether it took the key.
+func (a *App) rowCommand(r rune) (tea.Cmd, bool) {
+	switch r {
+	case 'i':
+		return a.enterEdit(true), true
+	case 'a':
+		return a.enterEdit(false), true
+	case 'o':
+		return a.insertBelow(), true
+	case 'G':
+		a.gotoItem(len(a.items()) - 1)
+	case 'y':
+		a.copyItem()
+	case 'p':
+		a.pasteItem()
+	case 'c':
+		a.openDates()
+	case 'q':
+		return tea.Quit, true
+	case '?':
+		a.page = pageHelp
+	default:
+		return nil, false
+	}
+	return nil, true
+}
+
+// updateLogStop is a stop other than content: the cursor sits on one place in the
+// row, so a digit goes into the reading under it rather than to the jump machine.
 func (a *App) updateLogStop(k tea.KeyMsg) tea.Cmd {
 	l := &a.log
 
@@ -195,50 +221,38 @@ func (a *App) updateLogStop(k tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
+// stopKey handles a key on a stop other than the content one. The row commands
+// mean the same thing here as there; what is left is the stop's own business:
+// the arrows move the number under the cursor on a measured stop, and s writes
+// the current clock into one of the two it can be written into.
 func (a *App) stopKey(k tea.KeyMsg) tea.Cmd {
 	if r, ok := keys.SingleRune(k); ok {
-		switch r {
-		case 'h':
-			return a.stepStop(-1)
-		case 'l':
-			return a.stepStop(1)
-		case 'k':
-			return a.adjustStop(1)
-		case 'j':
-			return a.adjustStop(-1)
-		case '.':
-			return a.setNow()
-		case 'G':
-			a.gotoItem(len(a.items()) - 1)
-		case 'i':
-			return a.enterEdit(true)
-		case 'a':
-			return a.enterEdit(false)
-		case 'o':
-			return a.insertBelow()
-		case 'y':
-			a.copyItem()
-		case 'p':
-			a.pasteItem()
-		case 'c':
-			a.openDates()
-		case 'q':
-			return tea.Quit
-		case '?':
-			a.page = pageHelp
+		if a.rowKey(r) {
+			return nil
 		}
-		return nil
+		if r == 's' {
+			return a.setNow()
+		}
+		cmd, _ := a.rowCommand(r)
+		return cmd
 	}
 
+	measured := timeStop(a.log.field)
 	switch k.Type {
-	case tea.KeyLeft:
-		return a.stepStop(-1)
-	case tea.KeyRight:
-		return a.stepStop(1)
 	case tea.KeyUp:
-		return a.adjustStop(1)
+		if measured {
+			return a.adjustStop(1)
+		}
+		a.moveItem(-1)
 	case tea.KeyDown:
-		return a.adjustStop(-1)
+		if measured {
+			return a.adjustStop(-1)
+		}
+		a.moveItem(1)
+	case tea.KeyTab:
+		return a.stepStop(1)
+	case tea.KeyShiftTab:
+		return a.stepStop(-1)
 	case tea.KeyEsc, tea.KeyEnter:
 		return a.selectStop(fContent)
 	}
@@ -259,20 +273,13 @@ func (a *App) selectStop(field int) tea.Cmd {
 	return nil
 }
 
-// adjustStop is up and down on the stop the cursor is on: the index moves the
-// item itself, every other stop moves its number. direction is +1 for the up key,
-// which each stop reads as its own kind of increase. Numbers wrap at their own
-// ceiling rather than sticking, so holding a key sweeps the whole range.
+// adjustStop is up and down on a measured stop: the number the cursor stands on
+// moves. direction is +1 for the up key, which each stop reads as its own kind
+// of increase. Numbers wrap at their own ceiling rather than sticking, so holding
+// a key sweeps the whole range.
 func (a *App) adjustStop(direction int) tea.Cmd {
-	l := &a.log
 	item := a.focusItem()
 	if item == nil {
-		return nil
-	}
-	if l.field == fIndex {
-		// Up means a smaller position in the list, where every other stop reads
-		// it as a bigger number.
-		a.reorderItem(-direction)
 		return nil
 	}
 
@@ -391,8 +398,9 @@ func (a *App) typeDigit(d int) tea.Cmd {
 	return nil
 }
 
-// setNow is the "." key: the clock reading written as it is, so logging a span
-// that starts now costs one keystroke.
+// setNow is the s key: the clock reading written as it is, so logging a span
+// that starts now costs one keystroke. The span stops have no reading of their
+// own, so the key is inert there.
 func (a *App) setNow() tea.Cmd {
 	l := &a.log
 	item := a.focusItem()
@@ -817,7 +825,8 @@ func (a *App) renderStatus() string {
 // stopHints says what the keys do where the cursor currently stands, which is
 // the one thing a row's eight stops disagree about. Each one has to fit an
 // 80-column terminal: a hint cut at the edge loses the key the reader was
-// reaching for.
+// reaching for, so the four row keys live on the two stops that have room for
+// them and every bar ends with the way out.
 func (a *App) stopHints() string {
 	l := &a.log
 
@@ -828,21 +837,24 @@ func (a *App) stopHints() string {
 	name := stopNames[l.field]
 	switch l.field {
 	case fContent:
-		return "内容 j/k 移动 h/l 换列 i 编辑 o 新建 0 序号 dd 删 y/p 复制 c 日期 ? 帮助 q 退出"
+		return "内容 j/k 换项 J/K 挪本项 Tab 换列 i 编辑 o 新建 dd 删 y/p 复制 c 日期 q 退出"
 	case fIndex:
-		return name + " | j/k 挪动本项（↑/k 上移） h/l 换列 Esc 回内容"
+		return "序号 j/k 换项 J/K 挪本项 Tab 换列 ? 帮助 Esc 回内容"
 	}
 
-	step, caveat := "每次 5", ". 现在"
+	// The clock stops take one half of a reading at a time and can be filled from
+	// the clock; the span stops own no reading at all, so a digit there lands on
+	// the end time and s has nothing to fill.
+	step, digits := "每次 5", "十位→个位 s 现在"
 	if hourStop(l.field) {
 		step = "每次 1"
 	}
 	if l.field == fDurHour || l.field == fDurMinute {
-		caveat = "由起止算出"
+		digits = "写回结束时间"
 	}
 
-	return name + " | ↑/k 加 ↓/j 减 " + step + " 循环 | 数字 十位→个位 " + caveat +
-		" | Esc 回内容"
+	return name + " | ↑ 加 ↓ 减 " + step + " 循环 | 数字 " + digits +
+		" | Tab 换列 Esc 回内容"
 }
 
 func (a *App) pendingText() string {

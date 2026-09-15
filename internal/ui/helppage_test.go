@@ -44,14 +44,16 @@ func TestNoHelpEntryIsCutShort(t *testing.T) {
 }
 
 // The keys the redesign retired must not survive on the page a reader trusts.
+// h and l still page the date list, so only the log page's retired keys are
+// pinned here: the clock key moved from . to s, and e never had a second life.
 func TestHelpPageDocumentsNoRetiredKeys(t *testing.T) {
 	for _, section := range helpSections {
 		if strings.Contains(section.title, "时间模式") {
 			t.Errorf("段落 %q 还在说已删除的时间模式", section.title)
 		}
 		for _, entry := range section.entries {
-			key := strings.ReplaceAll(entry.key, " ", "")
-			if key == "s" || key == "e" || key == "s/e" || key == "e/s" {
+			switch key := strings.ReplaceAll(entry.key, " ", ""); key {
+			case "e", ".", "时间列.":
 				t.Errorf("键 %q 已被删除，帮助页仍在介绍它", entry.key)
 			}
 		}
