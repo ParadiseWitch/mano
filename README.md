@@ -8,6 +8,11 @@
 
 <p align="center">
   <img src="docs/screenshot.png" alt="mano 运行截图" width="720">
+</p>
+
+在herdr中使用：
+
+<p align="center">
   <img src="docs/use_in_herdr.png" alt="mano 运行截图" width="720">
 </p>
 
