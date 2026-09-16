@@ -91,6 +91,7 @@ mano uninstall    # 删除 mano 本体（会先确认；日志与配置保留）
 
 ```sh
 mano                       # 打开今天的日志
+mano -v                    # 打印版本号（-version 同效，子命令 version 亦可）
 mano -date 2026-08-01      # 打开指定日期，也可写 20260801
 mano -file ~/notes/time.md # 换一个数据文件
 ```

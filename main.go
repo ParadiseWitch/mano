@@ -25,7 +25,14 @@ func main() {
 
 	file := flag.String("file", "", "日志文件路径（默认 ~/.mano/mano.md）")
 	date := flag.String("date", "", "打开指定日期，写作 20260801 或 2026-08-01（默认今天）")
+	showVersion := flag.Bool("v", false, "打印版本号并退出")
+	flag.BoolVar(showVersion, "version", false, "同 -v")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	path := *file
 	if path == "" {
