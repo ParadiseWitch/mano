@@ -1,6 +1,8 @@
 BIN := dist/mano
 WIN := dist/mano-windows-amd64.exe
-VERSION ?= devel
+# 本地构建从 git 取版本：正好在 tag 上就是 tag 名，tag 后有提交就带后缀；
+# 拿不到 git（比如在发布包里构建）退回 devel。
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo devel)
 LDFLAGS := -ldflags "-X main.version=$(VERSION)"
 
 .PHONY: all build build-windows dist run test fmt vet tidy clean
