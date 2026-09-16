@@ -10,10 +10,6 @@
   <img src="docs/screenshot.png" alt="mano 运行截图" width="720">
 </p>
 
-```sh
-mano -file examples/sample-day.md
-```
-
 ## 安装
 
 ### 脚本安装
