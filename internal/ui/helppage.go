@@ -150,7 +150,7 @@ func (a *App) viewHelp() string {
 
 func helpLines(width int) []string {
 	sectionStyle := lipgloss.NewStyle().Bold(true).
-		Foreground(fg(pal.Warn)).Background(bg(pal.Canvas))
+		Foreground(fg(pal.Warn))
 	descWidth := width - rowMargin - helpKeyWidth - 2
 
 	var lines []string
@@ -163,7 +163,7 @@ func helpLines(width int) []string {
 
 		for _, entry := range section.entries {
 			key := lipgloss.NewStyle().Width(helpKeyWidth).
-				Foreground(fg(pal.Text)).Background(bg(pal.Canvas)).
+				Foreground(fg(pal.Text)).
 				Render(fit(entry.key, helpKeyWidth))
 			desc := dimStyle.Render(fit(entry.desc, descWidth))
 			lines = append(lines, on(strings.Repeat(" ", rowMargin))+key+on("  ")+desc)

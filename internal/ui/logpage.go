@@ -666,7 +666,7 @@ func (a *App) viewLog() string {
 func (a *App) emptyRow() string {
 	hint := "今日暂无记录，按 o 新建"
 	lead := clamp(a.width-lipgloss.Width(hint), colMark, fixedWidth)
-	return cell(strings.Repeat(" ", lead)+hint, a.width, lipgloss.Left, fg(pal.Dim), bg(pal.Canvas))
+	return cell(strings.Repeat(" ", lead)+hint, a.width, lipgloss.Left, fg(pal.Dim), transparent)
 }
 
 // noDuration fills the duration column of an item that has no span yet. It is
@@ -686,7 +686,7 @@ func (a *App) renderRow(i int, it store.Item) string {
 
 	// A row is a line of readings in their own accents rather than a stack of
 	// bands, so the only ground it carries is the one the selected row sits on.
-	ground := bg(pal.Canvas)
+	ground := transparent
 	if selected {
 		ground = bg(pal.Row)
 	}
@@ -710,7 +710,7 @@ func (a *App) renderRow(i int, it store.Item) string {
 
 // indexCell is the item number. It is the one stop that takes the cursor's block
 // whole, having no hour and minute to split it between.
-func (a *App) indexCell(n int, ground lipgloss.Color, active bool) string {
+func (a *App) indexCell(n int, ground lipgloss.TerminalColor, active bool) string {
 	return cell(strconv.Itoa(n)+".", colIndex, lipgloss.Right,
 		choose(active, fg(pal.Ink), fg(pal.Index)),
 		choose(active, bg(pal.Field), ground))
@@ -721,7 +721,7 @@ func (a *App) indexCell(n int, ground lipgloss.Color, active bool) string {
 // block. An unset clock is a placeholder rather than a reading, so it takes the
 // secondary colour; the block still lands on the half the cursor is on, because
 // an empty clock is as fillable as a full one.
-func (a *App) clockCell(t *store.Time, accent, ground lipgloss.Color, hourActive, minuteActive bool) string {
+func (a *App) clockCell(t *store.Time, accent, ground lipgloss.TerminalColor, hourActive, minuteActive bool) string {
 	ink := accent
 	if t == nil {
 		ink = fg(pal.Dim)
@@ -743,7 +743,7 @@ func (a *App) clockCell(t *store.Time, accent, ground lipgloss.Color, hourActive
 // durationCell is the span column, editable through the end time standing behind
 // it. The hour and the minute are separate stops, as in the clock columns, and a
 // span that runs past midnight takes the accent that says so.
-func (a *App) durationCell(it store.Item, ground lipgloss.Color, hourActive, minuteActive bool) string {
+func (a *App) durationCell(it store.Item, ground lipgloss.TerminalColor, hourActive, minuteActive bool) string {
 	ink, text := fg(pal.Duration), noDuration
 	if it.Start != nil && it.End != nil {
 		dur, crossed := it.Duration()
@@ -769,7 +769,7 @@ func (a *App) durationCell(it store.Item, ground lipgloss.Color, hourActive, min
 // accents quiet: it is what the day is read for. A row the cursor is on lifts it
 // to the brighter of the two text colours, the editor takes over while it is
 // open, and a row with nothing logged says so in the secondary colour.
-func (a *App) contentCell(it store.Item, ground lipgloss.Color, selected, editing bool) string {
+func (a *App) contentCell(it store.Item, ground lipgloss.TerminalColor, selected, editing bool) string {
 	width := a.contentWidth()
 
 	col := fg(pal.Text)

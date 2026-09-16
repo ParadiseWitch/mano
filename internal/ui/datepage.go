@@ -282,8 +282,8 @@ func (a *App) renderDateRow(i int) string {
 
 	// A date is read as plain text, so the only ground in the list belongs to the
 	// row the cursor is on — and every stretch of that row has to be painted on
-	// it, or the gaps would punch canvas-coloured holes in the panel.
-	ground := bg(pal.Canvas)
+	// it, or the gaps would punch holes through the raised panel.
+	ground := transparent
 	if selected {
 		ground = bg(pal.Row)
 	}

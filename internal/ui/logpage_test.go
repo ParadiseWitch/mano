@@ -1803,8 +1803,11 @@ func TestTheSelectedRowCarriesTheOnlyGround(t *testing.T) {
 	if !strings.Contains(rows[0], painted(t, "甲", pal.Selected, pal.Row)) {
 		t.Error("the row the cursor is on does not lift its content onto its own ground")
 	}
-	if !strings.Contains(rows[1], painted(t, "乙", pal.Text, pal.Canvas)) {
-		t.Error("a row the cursor is not on is not plain text on the program ground")
+	if !strings.Contains(rows[1], fgSeq(t, pal.Text)) {
+		t.Error("a row the cursor is not on is not written in the plain text accent")
+	}
+	if strings.Contains(rows[1], bgSeq(t, pal.Canvas)) {
+		t.Error("a row the cursor is not on still sits on a canvas of its own")
 	}
 	if strings.Contains(rows[1], bgSeq(t, pal.Row)) {
 		t.Error("a row the cursor is not on borrowed the selected row's ground")
@@ -1985,7 +1988,7 @@ func TestACrossedSpanKeepsItsOwnAccent(t *testing.T) {
 	if !strings.Contains(rows[0], painted(t, "02", pal.Crossed, pal.Row)) {
 		t.Error("a span running past midnight is not written in the Crossed accent")
 	}
-	if !strings.Contains(rows[1], painted(t, "01", pal.Duration, pal.Canvas)) {
+	if !strings.Contains(rows[1], fgSeq(t, pal.Duration)) {
 		t.Error("an ordinary span lost the duration accent")
 	}
 
@@ -2011,10 +2014,11 @@ func TestAPlaceholderStaysInTheBackground(t *testing.T) {
 	a := startLog(t, rowOf("还没填时间", "", ""), rowOf("也没填", "", ""))
 	rows := frameRows(t, a)
 
-	for i, ground := range []string{pal.Row, pal.Canvas} {
-		if n := strings.Count(rows[i], painted(t, "--", pal.Dim, ground)); n != 6 {
-			t.Errorf("row %d shows %d placeholder halves in the secondary colour, want six: start, end and the span, two each", i, n)
-		}
+	if n := strings.Count(rows[0], painted(t, "--", pal.Dim, pal.Row)); n != 6 {
+		t.Errorf("row 0 shows %d placeholder halves in the secondary colour, want six: start, end and the span, two each", n)
+	}
+	if n := strings.Count(rows[1], paintedOnNothing(t, "--", pal.Dim)); n != 6 {
+		t.Errorf("row 1 shows %d placeholder halves in the secondary colour, want six: start, end and the span, two each", n)
 	}
 	for _, accent := range []string{pal.Start, pal.End, pal.Duration, pal.Crossed} {
 		if strings.Contains(rows[1], fgSeq(t, accent)) {
@@ -2163,6 +2167,14 @@ func fgSeq(t *testing.T, hexColor string) string {
 		t.Fatalf("nothing painted for %q, want a truecolour foreground:\n%q", hexColor, sample)
 	}
 	return strings.TrimSuffix(strings.TrimPrefix(sample[:i], "\x1b["), "m")
+}
+
+// paintedOnNothing quotes a stretch of text in one colour over the terminal's
+// own background, which is what an unselected row carries now that the program
+// lays no canvas of its own.
+func paintedOnNothing(t *testing.T, text, ink string) string {
+	t.Helper()
+	return "\x1b[" + fgSeq(t, ink) + "m" + text
 }
 
 // painted quotes a stretch of text together with the colour it is written in and

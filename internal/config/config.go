@@ -18,7 +18,7 @@ import (
 // the only two backgrounds on a row are the selected row's own and the block the
 // cursor stands on.
 type Colors struct {
-	Canvas   string // the whole program's ground
+	Canvas   string // unused since the background went transparent; kept so old configs still load
 	Row      string // the selected row's ground
 	Index    string // the item number
 	Start    string // start time
@@ -48,7 +48,7 @@ type entry struct {
 }
 
 var entries = []entry{
-	{"background", "程序整体底色，列表行就坐在它上面", func(c Colors) string { return c.Canvas }, func(c *Colors, v string) { c.Canvas = v }},
+	{"background", "已不再生效：背景改为透明，跟随终端配色；保留此键只为兼容旧配置", func(c Colors) string { return c.Canvas }, func(c *Colors, v string) { c.Canvas = v }},
 	{"row", "选中行的底色", func(c Colors) string { return c.Row }, func(c *Colors, v string) { c.Row = v }},
 	{"index", "序号", func(c Colors) string { return c.Index }, func(c *Colors, v string) { c.Index = v }},
 	{"start", "开始时间", func(c Colors) string { return c.Start }, func(c *Colors, v string) { c.Start = v }},

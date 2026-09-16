@@ -28,6 +28,12 @@ const (
 // config file, which happens before the first frame is drawn.
 var pal = config.Default()
 
+// transparent is the terminal's own background: the program lays no canvas of
+// its own any more, so whatever the user's terminal theme is shows through.
+// Where a stretch of UI still needs a ground of its own — the selected row, the
+// field under the cursor, the status bar — bg names the palette entry for it.
+var transparent lipgloss.TerminalColor = lipgloss.NoColor{}
+
 // bg and fg name the two roles a palette entry can play, so a call site reads
 // as a sentence: cell(text, width, align, fg(pal.Ink), bg(pal.Index)).
 func bg(s string) lipgloss.Color { return lipgloss.Color(s) }
@@ -38,7 +44,6 @@ var (
 	dimStyle    lipgloss.Style
 	warnStyle   lipgloss.Style
 	statusStyle lipgloss.Style
-	canvasStyle lipgloss.Style
 )
 
 func init() { buildStyles() }
@@ -46,11 +51,10 @@ func init() { buildStyles() }
 // buildStyles rebuilds the styles that carry a palette entry, so a config file
 // reaches every corner of the UI and not just the cells built per frame.
 func buildStyles() {
-	titleStyle = lipgloss.NewStyle().Bold(true).Foreground(fg(pal.Title)).Background(bg(pal.Canvas))
-	dimStyle = lipgloss.NewStyle().Foreground(fg(pal.Dim)).Background(bg(pal.Canvas))
-	warnStyle = lipgloss.NewStyle().Foreground(fg(pal.Warn)).Background(bg(pal.Canvas))
+	titleStyle = lipgloss.NewStyle().Bold(true).Foreground(fg(pal.Title))
+	dimStyle = lipgloss.NewStyle().Foreground(fg(pal.Dim))
+	warnStyle = lipgloss.NewStyle().Foreground(fg(pal.Warn))
 	statusStyle = lipgloss.NewStyle().Background(bg(pal.Status)).Foreground(fg(pal.Dim))
-	canvasStyle = lipgloss.NewStyle().Background(bg(pal.Canvas))
 }
 
 // apply takes over the colours from the config file.
@@ -59,9 +63,9 @@ func apply(c config.Colors) {
 	buildStyles()
 }
 
-// on paints plain text with the program background, for the stretches of a line
-// that carry no colour of their own.
-func on(s string) string { return canvasStyle.Render(s) }
+// on paints plain text; it once carried the program ground and is now the
+// identity, kept so the padding call sites stay readable.
+func on(s string) string { return s }
 
 // fit truncates to width so lipgloss pads the cell instead of wrapping it onto
 // a second line and breaking the row.
@@ -84,7 +88,7 @@ func cut(s string, width int) string {
 }
 
 // cell renders one fixed-width colour block.
-func cell(text string, width int, align lipgloss.Position, col, ground lipgloss.Color) string {
+func cell(text string, width int, align lipgloss.Position, col, ground lipgloss.TerminalColor) string {
 	return lipgloss.NewStyle().
 		Width(width).
 		Align(align).
@@ -96,13 +100,13 @@ func cell(text string, width int, align lipgloss.Position, col, ground lipgloss.
 // run paints one stretch of text with no padding of its own. A column is built
 // from runs so the half of it the cursor stands on can be picked out while the
 // rest keeps the column's own background.
-func run(text string, col, ground lipgloss.Color) string {
+func run(text string, col, ground lipgloss.TerminalColor) string {
 	return lipgloss.NewStyle().Foreground(col).Background(ground).Render(text)
 }
 
 // choose picks a colour by condition, which keeps a run's two possible grounds
 // legible where they are used.
-func choose(active bool, yes, no lipgloss.Color) lipgloss.Color {
+func choose(active bool, yes, no lipgloss.TerminalColor) lipgloss.TerminalColor {
 	if active {
 		return yes
 	}
@@ -119,17 +123,14 @@ func divider(width int) string {
 	}
 	rule := lipgloss.NewStyle().
 		Foreground(fg(pal.Divider)).
-		Background(bg(pal.Canvas)).
 		Render(strings.Repeat("─", width))
 	return cut(rule, width)
 }
 
-// canvas fills the terminal with the program background: every line is padded
-// out to the full width and the block to the full height, so no cell falls back
-// to whatever the terminal itself is set to. Padding has to be laid line by
-// line, twice over: a style handed a frame that already carries colour writes
-// its background only down to the first reset inside it, and a vertical join
-// evens up the ragged edge of the block with spaces that carry none at all.
+// canvas evens the frame out to the full width and height. The program paints
+// no background of its own, so the padding is plain space and the terminal's
+// own colours show through; the padding is still laid line by line because a
+// vertical join pads a ragged edge with lines that would drift out of step.
 func canvas(s string, width, height int) string {
 	if width <= 0 || height <= 0 {
 		return s
