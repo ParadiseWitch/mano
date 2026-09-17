@@ -12,17 +12,13 @@ func timePtr(h, m int) *Time {
 }
 
 func TestParseSpecExample(t *testing.T) {
-	input := `# 20260801
-
-1. 日志事项1内容
-
-- START: 09:00
-- END: 10:21
-
-2. 日志事项2内容
-
-- START: 10:30
-- END: 11:21
+	input := `* 2026-08-01
+** 日志事项1内容
+   - START: 09:00
+   - END: 10:21
+** 日志事项2内容
+   - START: 10:30
+   - END: 11:21
 `
 
 	got := Parse([]byte(input))
@@ -40,21 +36,18 @@ func TestParseSpecExample(t *testing.T) {
 }
 
 func TestParseToleratesVariants(t *testing.T) {
-	input := "# 2026-08-01\r\n" +
-		"\r\n" +
-		"7.带空格的编号也被接受\r\n" +
-		"\r\n" +
-		"- start:9:05\r\n" +
-		"- END : 17:45\r\n" +
+	input := "* 2026-08-01\r\n" +
+		"** 内容正常\r\n" +
+		"   - start:9:05\r\n" +
+		"   - END: 17:45\r\n" +
 		"这一行不属于格式，应当被丢弃\r\n" +
-		"\r\n" +
-		"8. 只有内容没有时间\r\n"
+		"** 只有内容没有时间\r\n"
 
 	got := Parse([]byte(input))
 	want := Journal{Days: []Day{{
 		Date: "2026-08-01",
 		Items: []Item{
-			{Content: "带空格的编号也被接受", Start: timePtr(9, 5), End: timePtr(17, 45)},
+			{Content: "内容正常", Start: timePtr(9, 5), End: timePtr(17, 45)},
 			{Content: "只有内容没有时间"},
 		},
 	}}}
@@ -65,20 +58,14 @@ func TestParseToleratesVariants(t *testing.T) {
 }
 
 func TestParseRejectsImpossibleValues(t *testing.T) {
-	input := `# 20261340
-
-1. 日期不存在的段落整体忽略
-
-# 20260801
-
-- START: 09:00
-
-1. 时间字段出现在条目之前，忽略
-
-2. 非法时间
-
-- START: 25:00
-- END: 10:99
+	input := `* 2026-13-40
+** 日期不存在的段落整体忽略
+* 2026-08-01
+   - START: 09:00
+** 时间字段出现在条目之前，忽略
+** 非法时间
+   - START: 25:00
+   - END: 10:99
 `
 
 	got := Parse([]byte(input))
@@ -96,21 +83,14 @@ func TestParseRejectsImpossibleValues(t *testing.T) {
 }
 
 func TestParseSortsAscendingAndMergesDuplicates(t *testing.T) {
-	input := `# 20260803
-
-1. 三天
-
-# 20260801
-
-1. 一天
-
-# 20260803
-
-2. 三天续
-
-# 20260802
-
-1. 两天
+	input := `* 2026-08-03
+** 三天
+* 2026-08-01
+** 一天
+* 2026-08-03
+** 三天续
+* 2026-08-02
+** 两天
 `
 
 	got := Parse([]byte(input))
@@ -147,17 +127,13 @@ func TestSerializeMatchesSpecLayout(t *testing.T) {
 		},
 	}}}
 
-	want := `# 20260801
-
-1. 日志事项1内容
-
-- START: 09:00
-- END: 10:21
-
-2. 日志事项2内容
-
-- START: 10:30
-- END: 11:21
+	want := `* 2026-08-01
+** 日志事项1内容
+   - START: 09:00
+   - END: 10:21
+** 日志事项2内容
+   - START: 10:30
+   - END: 11:21
 `
 
 	if got := string(j.Serialize()); got != want {
@@ -175,19 +151,14 @@ func TestSerializeOmitsMissingFields(t *testing.T) {
 		{Date: "2026-08-02"},
 	}}
 
-	want := `# 20260801
+	want := `* 2026-08-01
+** 只有开始
+   - START: 09:00
+** 只有结束
+   - END: 18:30
+** 都没有
 
-1. 只有开始
-
-- START: 09:00
-
-2. 只有结束
-
-- END: 18:30
-
-3. 都没有
-
-# 20260802
+* 2026-08-02
 `
 
 	if got := string(j.Serialize()); got != want {
@@ -197,38 +168,27 @@ func TestSerializeOmitsMissingFields(t *testing.T) {
 
 func TestRoundTripIsStable(t *testing.T) {
 	inputs := []string{
-		`# 20260801
-
-1. 日志事项1内容
-
-- START: 09:00
-- END: 10:21
-
-2. 日志事项2内容
-
-- START: 10:30
-- END: 11:21
+		`* 2026-08-01
+** 日志事项1内容
+   - START: 09:00
+   - END: 10:21
+** 日志事项2内容
+   - START: 10:30
+   - END: 11:21
 `,
-		`# 20260801
+		`* 2026-08-01
+** 只有开始
+   - START: 09:00
+** 只有结束
+   - END: 18:30
+** 都没有
 
-1. 只有开始
-
-- START: 09:00
-
-2. 只有结束
-
-- END: 18:30
-
-3. 都没有
-
-# 20260802
+* 2026-08-02
 `,
-		`# 20260101
-
-1. 跨年
-
-- START: 23:00
-- END: 01:30
+		`* 2026-01-01
+** 跨年
+   - START: 23:00
+   - END: 01:30
 `,
 	}
 
@@ -352,7 +312,7 @@ func TestParseDate(t *testing.T) {
 }
 
 func TestSaveAndReload(t *testing.T) {
-	path := t.TempDir() + "/nested/mano.md"
+	path := t.TempDir() + "/nested/orgmaid.org"
 
 	saved := &Store{Path: path}
 	saved.Journal.EnsureDay("2026-08-02")

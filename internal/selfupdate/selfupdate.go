@@ -1,5 +1,5 @@
-// Package selfupdate 实现 `mano update` 与 `mano uninstall`：
-// 从 GitHub Release 检查、下载、校验并就地替换 mano 自己的二进制，
+// Package selfupdate 实现 `orgmaid update` 与 `orgmaid uninstall`：
+// 从 GitHub Release 检查、下载、校验并就地替换 orgmaid 自己的二进制，
 // 或删除自己。日志与配置永远保留。
 package selfupdate
 
@@ -16,18 +16,18 @@ import (
 	"strings"
 	"time"
 
-	"mano/internal/config"
-	"mano/internal/store"
+	"orgmaid/internal/config"
+	"orgmaid/internal/store"
 )
 
 // releaseBase 在测试里指向 httptest 服务器。
-var releaseBase = "https://github.com/ParadiseWitch/mano/releases"
+var releaseBase = "https://github.com/ParadiseWitch/orgmaid/releases"
 
 var httpc = &http.Client{Timeout: 2 * time.Minute}
 
 // assetName 是本平台在 Release 里的资产名，与 release.yml 的产物一致。
 func assetName() string {
-	name := "mano-" + runtime.GOOS + "-" + runtime.GOARCH
+	name := "orgmaid-" + runtime.GOOS + "-" + runtime.GOARCH
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}
@@ -110,7 +110,7 @@ func Update(version, self string, out io.Writer) error {
 		return err
 	}
 	if tag == version {
-		fmt.Fprintf(out, "mano %s 已是最新版本\n", tag)
+		fmt.Fprintf(out, "orgmaid %s 已是最新版本\n", tag)
 		return nil
 	}
 	fmt.Fprintf(out, "当前 %s，最新 %s，开始更新\n", version, tag)
@@ -126,9 +126,9 @@ func Update(version, self string, out io.Writer) error {
 		return err
 	}
 
-	tmp, err := os.CreateTemp(filepath.Dir(self), ".mano-update-*")
+	tmp, err := os.CreateTemp(filepath.Dir(self), ".orgmaid-update-*")
 	if err != nil {
-		return fmt.Errorf("无法在 %s 写入临时文件（权限不足？可 sudo mano update）：%w", filepath.Dir(self), err)
+		return fmt.Errorf("无法在 %s 写入临时文件（权限不足？可 sudo orgmaid update）：%w", filepath.Dir(self), err)
 	}
 	defer os.Remove(tmp.Name())
 	url := fmt.Sprintf("%s/download/%s/%s", releaseBase, tag, assetName())

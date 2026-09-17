@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"mano/internal/config"
+	"orgmaid/internal/config"
 )
 
 // Column widths of a log row, in terminal cells. The columns sit flush against

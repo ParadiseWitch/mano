@@ -175,7 +175,7 @@ func TestThemesAreComplete(t *testing.T) {
 }
 
 func TestLoadKeepsGoodLinesWhenOneIsBad(t *testing.T) {
-	content := `# mano 界面配色。改完保存，重启 mano 生效。
+	content := `# orgmaid 界面配色。改完保存，重启 orgmaid 生效。
 
 [colors]
 index = "#ff0000"
@@ -419,7 +419,7 @@ func fieldOf(t *testing.T, e entry) string {
 }
 
 func TestLoadAcceptsCRLF(t *testing.T) {
-	// The file lives in ~/.mano/config.toml and gets edited in a Windows
+	// The file lives in ~/.orgmaid/config.toml and gets edited in a Windows
 	// editor, so carriage returns are the normal case, not a corner one.
 	twoKeys := Default()
 	twoKeys.Index = "#aabbcc"
@@ -474,7 +474,7 @@ func TestDefaultPathPointsAtManoDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultPath: %v", err)
 	}
-	want := filepath.Join(".mano", "config.toml")
+	want := filepath.Join(".orgmaid", "config.toml")
 	if !strings.HasSuffix(path, want) {
 		t.Errorf("DefaultPath = %q, want it to end in %q", path, want)
 	}

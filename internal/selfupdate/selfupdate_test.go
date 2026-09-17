@@ -15,19 +15,19 @@ import (
 )
 
 func TestParseChecksums(t *testing.T) {
-	data := "aabb  mano-linux-amd64\nccdd  mano-windows-amd64.exe\n"
-	got, err := parseChecksums(data, "mano-windows-amd64.exe")
+	data := "aabb  orgmaid-linux-amd64\nccdd  orgmaid-windows-amd64.exe\n"
+	got, err := parseChecksums(data, "orgmaid-windows-amd64.exe")
 	if err != nil || got != "ccdd" {
 		t.Fatalf("得到 %q %v，期望 ccdd", got, err)
 	}
-	if _, err := parseChecksums(data, "mano-darwin-arm64"); err == nil {
+	if _, err := parseChecksums(data, "orgmaid-darwin-arm64"); err == nil {
 		t.Fatal("缺资产时应报错")
 	}
 }
 
 func TestVerifySha256(t *testing.T) {
 	f := filepath.Join(t.TempDir(), "bin")
-	content := []byte("hello mano")
+	content := []byte("hello orgmaid")
 	if err := os.WriteFile(f, content, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestUpdateReplacesSelf(t *testing.T) {
 	defer srv.Close()
 	withReleaseBase(t, srv.URL+"/releases")
 
-	self := filepath.Join(t.TempDir(), "mano")
+	self := filepath.Join(t.TempDir(), "orgmaid")
 	if err := os.WriteFile(self, []byte("old"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestUpdateAlreadyLatest(t *testing.T) {
 	withReleaseBase(t, srv.URL+"/releases")
 
 	var out bytes.Buffer
-	if err := Update("v2.0.0", filepath.Join(t.TempDir(), "mano"), &out); err != nil {
+	if err := Update("v2.0.0", filepath.Join(t.TempDir(), "orgmaid"), &out); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "已是最新") {
@@ -136,7 +136,7 @@ func TestUpdateRejectsBadChecksum(t *testing.T) {
 	defer srv.Close()
 	withReleaseBase(t, srv.URL+"/releases")
 
-	self := filepath.Join(t.TempDir(), "mano")
+	self := filepath.Join(t.TempDir(), "orgmaid")
 	if err := os.WriteFile(self, []byte("old"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestUpdateRejectsBadChecksum(t *testing.T) {
 }
 
 func TestUninstall(t *testing.T) {
-	self := filepath.Join(t.TempDir(), "mano")
+	self := filepath.Join(t.TempDir(), "orgmaid")
 	if err := os.WriteFile(self, []byte("bin"), 0o755); err != nil {
 		t.Fatal(err)
 	}

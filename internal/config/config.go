@@ -1,4 +1,4 @@
-// Package config holds mano's appearance settings: the themes it ships with,
+// Package config holds orgmaid's appearance settings: the themes it ships with,
 // and the TOML file that picks one of them and overrides whichever colours the
 // user wants different, so the UI never hard-codes a colour of its own.
 package config
@@ -120,7 +120,7 @@ func OneDark() Colors {
 	}
 }
 
-// theme is one of the looks mano carries, named as the config file names it.
+// theme is one of the looks orgmaid carries, named as the config file names it.
 type theme struct {
 	name   string
 	colors Colors
@@ -133,7 +133,7 @@ var themes = []theme{
 	{"onedark", OneDark()},
 }
 
-// Default is the palette mano starts from, and the one it falls back to when
+// Default is the palette orgmaid starts from, and the one it falls back to when
 // the file cannot be read: the first theme on the shelf.
 func Default() Colors { return themes[0].colors }
 
@@ -167,7 +167,7 @@ func Template() string {
 	ship := themes[0]
 
 	var b strings.Builder
-	b.WriteString("# mano 界面配色。改完保存，重启 mano 生效。\n\n")
+	b.WriteString("# orgmaid 界面配色。改完保存，重启 orgmaid 生效。\n\n")
 	fmt.Fprintf(&b, "# 主题，可选 %s。\ntheme = %q\n\n", strings.Join(Names(), "、"), ship.name)
 	fmt.Fprintf(&b, "# 下面是 %s 的取值：去掉行首的 # 改掉，就盖过主题里的这一个颜色。\n[colors]\n", ship.name)
 	for _, e := range entries {
@@ -176,13 +176,13 @@ func Template() string {
 	return b.String()
 }
 
-// DefaultPath is ~/.mano/config.toml.
+// DefaultPath is ~/.orgmaid/config.toml.
 func DefaultPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".mano", "config.toml"), nil
+	return filepath.Join(home, ".orgmaid", "config.toml"), nil
 }
 
 // Load reads path. A file that is not there yet is not an error: the defaults

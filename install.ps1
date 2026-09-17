@@ -1,17 +1,17 @@
-# mano 安装脚本 (Windows)
-# 用法: irm https://raw.githubusercontent.com/ParadiseWitch/mano/main/install.ps1 | iex
-#       指定版本: $env:MANO_VERSION='v1.2.3'; irm ... | iex
+# orgmaid 安装脚本 (Windows)
+# 用法: irm https://raw.githubusercontent.com/ParadiseWitch/orgmaid/main/install.ps1 | iex
+#       指定版本: $env:ORGMAID_VERSION='v1.2.3'; irm ... | iex
 $ErrorActionPreference = 'Stop'
 
-$repo = 'ParadiseWitch/mano'
-$version = if ($env:MANO_VERSION) { $env:MANO_VERSION } else { 'latest' }
+$repo = 'ParadiseWitch/orgmaid'
+$version = if ($env:ORGMAID_VERSION) { $env:ORGMAID_VERSION } else { 'latest' }
 
 $arch = $env:PROCESSOR_ARCHITECTURE.ToLower()
 if ($arch -eq 'amd64') { $arch = 'amd64' }
 elseif ($arch -eq 'arm64') { $arch = 'arm64' }
-else { throw "mano: 不支持的架构 $arch" }
+else { throw "orgmaid: 不支持的架构 $arch" }
 
-$asset = "mano-windows-$arch.exe"
+$asset = "orgmaid-windows-$arch.exe"
 $base = "https://github.com/$repo/releases"
 if ($version -eq 'latest') {
   $base = "$base/latest/download"
@@ -29,15 +29,15 @@ try {
   $line = Get-Content (Join-Path $tmp 'checksums.txt') |
     Where-Object { $_ -match "(?m)\b$([regex]::Escape($asset))\s*$" } |
     Select-Object -First 1
-  if (-not $line) { throw "mano: checksums.txt 中没有 $asset" }
+  if (-not $line) { throw "orgmaid: checksums.txt 中没有 $asset" }
   $expected = ($line -split '\s+')[0]
   $actual = (Get-FileHash (Join-Path $tmp $asset) -Algorithm SHA256).Hash.ToLower()
-  if ($actual -ne $expected.ToLower()) { throw 'mano: 校验失败，中止安装' }
+  if ($actual -ne $expected.ToLower()) { throw 'orgmaid: 校验失败，中止安装' }
   Write-Host '==> sha256 校验通过'
 
-  $destDir = Join-Path $env:LOCALAPPDATA 'Programs\mano'
+  $destDir = Join-Path $env:LOCALAPPDATA 'Programs\orgmaid'
   New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-  $dest = Join-Path $destDir 'mano.exe'
+  $dest = Join-Path $destDir 'orgmaid.exe'
   Move-Item -Force (Join-Path $tmp $asset) $dest
 
   $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')

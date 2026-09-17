@@ -30,12 +30,12 @@ jobs:
           mkdir -p dist
           build() { CGO_ENABLED=0 GOOS="$1" GOARCH="$2" \
             go build -trimpath -ldflags "-s -w -X main.version=$TAG" -o "dist/$3" .; }
-          build darwin  arm64  mano-darwin-arm64
-          build darwin  amd64  mano-darwin-amd64
-          build linux   amd64  mano-linux-amd64
-          build linux   arm64  mano-linux-arm64
-          build windows amd64  mano-windows-amd64.exe
-          (cd dist && sha256sum mano-* > checksums.txt)
+          build darwin  arm64  orgmaid-darwin-arm64
+          build darwin  amd64  orgmaid-darwin-amd64
+          build linux   amd64  orgmaid-linux-amd64
+          build linux   arm64  orgmaid-linux-arm64
+          build windows amd64  orgmaid-windows-amd64.exe
+          (cd dist && sha256sum orgmaid-* > checksums.txt)
 
       - name: Publish release
         env:
@@ -44,11 +44,11 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "$TAG" \
-            dist/mano-darwin-arm64 \
-            dist/mano-darwin-amd64 \
-            dist/mano-linux-amd64 \
-            dist/mano-linux-arm64 \
-            dist/mano-windows-amd64.exe \
+            dist/orgmaid-darwin-arm64 \
+            dist/orgmaid-darwin-amd64 \
+            dist/orgmaid-linux-amd64 \
+            dist/orgmaid-linux-arm64 \
+            dist/orgmaid-windows-amd64.exe \
             dist/checksums.txt \
             --title "$TAG" \
             --generate-notes

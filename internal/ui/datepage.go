@@ -9,8 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"mano/internal/keys"
-	"mano/internal/store"
+	"orgmaid/internal/keys"
+	"orgmaid/internal/store"
 )
 
 type dateState struct {

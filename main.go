@@ -8,10 +8,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"mano/internal/config"
-	"mano/internal/selfupdate"
-	"mano/internal/store"
-	"mano/internal/ui"
+	"orgmaid/internal/config"
+	"orgmaid/internal/selfupdate"
+	"orgmaid/internal/store"
+	"orgmaid/internal/ui"
 )
 
 // version 由 release.yml 用 -ldflags -X main.version=... 注入。
@@ -23,7 +23,7 @@ func main() {
 		return
 	}
 
-	file := flag.String("file", "", "日志文件路径（默认 ~/.mano/mano.md）")
+	file := flag.String("file", "", "日志文件路径（默认 ~/.orgmaid/orgmaid.org）")
 	date := flag.String("date", "", "打开指定日期，写作 20260801 或 2026-08-01（默认今天）")
 	showVersion := flag.Bool("v", false, "打印版本号并退出")
 	flag.BoolVar(showVersion, "version", false, "同 -v")
@@ -65,7 +65,7 @@ func main() {
 	}
 }
 
-// palette is the look mano starts with: the config file is written out on the
+// palette is the look orgmaid starts with: the config file is written out on the
 // first run and read back from then on. Trouble with the file is reported on
 // the status line rather than being fatal, because the shipped defaults can
 // always carry a session.
@@ -85,7 +85,7 @@ func palette() (config.Colors, string) {
 }
 
 func fail(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "mano: "+format+"\n", args...)
+	fmt.Fprintf(os.Stderr, "orgmaid: "+format+"\n", args...)
 	os.Exit(1)
 }
 
@@ -99,7 +99,7 @@ func subcommand() {
 		rejectArgs(name, args)
 		self, err := selfupdate.SelfPath()
 		if err != nil {
-			fail("找不到 mano 自己的位置：%v", err)
+			fail("找不到 orgmaid 自己的位置：%v", err)
 		}
 		if err := selfupdate.Update(version, self, os.Stdout); err != nil {
 			fail("%v", err)
@@ -115,7 +115,7 @@ func subcommand() {
 		}
 		self, err := selfupdate.SelfPath()
 		if err != nil {
-			fail("找不到 mano 自己的位置：%v", err)
+			fail("找不到 orgmaid 自己的位置：%v", err)
 		}
 		if err := selfupdate.Uninstall(self, yes, os.Stdin, os.Stdout); err != nil {
 			fail("%v", err)
@@ -127,6 +127,6 @@ func subcommand() {
 
 func rejectArgs(name string, args []string) {
 	if len(args) > 0 {
-		fail("mano %s 不接受参数：%v", name, args)
+		fail("orgmaid %s 不接受参数：%v", name, args)
 	}
 }

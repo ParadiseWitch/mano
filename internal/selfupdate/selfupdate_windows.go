@@ -40,7 +40,7 @@ func removeSelf(self string) error {
 	cmd := exec.Command("powershell", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", ps)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	if err := cmd.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "mano: 后台清理进程启动失败，请手动删除 %s\n", old)
+		fmt.Fprintf(os.Stderr, "orgmaid: 后台清理进程启动失败，请手动删除 %s\n", old)
 	}
 	return nil
 }

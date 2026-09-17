@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	dateHeaderRe = regexp.MustCompile(`^#\s*([0-9]{4}-?[0-9]{2}-?[0-9]{2})\s*$`)
-	itemRe       = regexp.MustCompile(`^([0-9]+)\.\s*(.*)$`)
-	fieldRe      = regexp.MustCompile(`(?i)^-\s*(START|END)\s*:\s*([0-9]{1,2}:[0-9]{2})\s*$`)
+	dateHeaderRe = regexp.MustCompile(`^\* ([0-9]{4}-[0-9]{2}-[0-9]{2})$`)
+	itemRe       = regexp.MustCompile(`^\*\* (.*)$`)
+	fieldRe      = regexp.MustCompile(`(?i)^   - (START|END)\s*:\s*([0-9]{1,2}:[0-9]{2})\s*$`)
 )
 
 // ParseDate normalises a compact or dashed date to DateLayout.
@@ -23,9 +23,9 @@ func ParseDate(s string) (string, bool) {
 	return "", false
 }
 
-// Parse reads markdown into a journal. Days come back in ascending date order
+// Parse reads org-mode into a journal. Days come back in ascending date order
 // and repeated date headers are merged. Lines the format does not describe are
-// dropped, since mano owns the file outright.
+// dropped, since orgmaid owns the file outright.
 func Parse(data []byte) Journal {
 	var j Journal
 	dayIdx, itemIdx := -1, -1
@@ -34,12 +34,11 @@ func Parse(data []byte) Journal {
 		line := strings.TrimRight(raw, "\r")
 
 		if m := dateHeaderRe.FindStringSubmatch(line); m != nil {
-			date, ok := ParseDate(m[1])
-			if !ok {
+			if _, ok := ParseDate(m[1]); !ok {
 				dayIdx, itemIdx = -1, -1
 				continue
 			}
-			dayIdx, itemIdx = j.appendDay(date), -1
+			dayIdx, itemIdx = j.appendDay(m[1]), -1
 			continue
 		}
 
@@ -48,7 +47,7 @@ func Parse(data []byte) Journal {
 		}
 
 		if m := itemRe.FindStringSubmatch(line); m != nil {
-			j.Days[dayIdx].Items = append(j.Days[dayIdx].Items, Item{Content: m[2]})
+			j.Days[dayIdx].Items = append(j.Days[dayIdx].Items, Item{Content: m[1]})
 			itemIdx = len(j.Days[dayIdx].Items) - 1
 			continue
 		}

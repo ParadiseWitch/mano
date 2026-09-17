@@ -10,8 +10,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"mano/internal/keys"
-	"mano/internal/store"
+	"orgmaid/internal/keys"
+	"orgmaid/internal/store"
 )
 
 // A row's cursor sits on one of eight stops. The three measured columns each

@@ -13,13 +13,13 @@ type Store struct {
 	Journal Journal
 }
 
-// DefaultPath is ~/.mano/mano.md, resolved through the platform home directory.
+// DefaultPath is ~/.orgmaid/orgmaid.org, resolved through the platform home directory.
 func DefaultPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".mano", "mano.md"), nil
+	return filepath.Join(home, ".orgmaid", "orgmaid.org"), nil
 }
 
 // Open loads path. A file that does not exist yet yields an empty journal
@@ -43,7 +43,7 @@ func (s *Store) Save() error {
 		return err
 	}
 
-	tmp, err := os.CreateTemp(dir, ".mano-*.tmp")
+	tmp, err := os.CreateTemp(dir, ".orgmaid-*.tmp")
 	if err != nil {
 		return err
 	}

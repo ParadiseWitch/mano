@@ -1,4 +1,4 @@
-module mano
+module orgmaid
 
 go 1.24.2
 

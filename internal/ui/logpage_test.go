@@ -15,9 +15,9 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"
 
-	"mano/internal/config"
-	"mano/internal/keys"
-	"mano/internal/store"
+	"orgmaid/internal/config"
+	"orgmaid/internal/keys"
+	"orgmaid/internal/store"
 )
 
 const logDate = "2026-09-09"
@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 func startLog(t *testing.T, items ...store.Item) *App {
 	t.Helper()
 
-	st := &store.Store{Path: filepath.Join(t.TempDir(), "mano.md")}
+	st := &store.Store{Path: filepath.Join(t.TempDir(), "orgmaid.org")}
 	st.Journal.EnsureDay(logDate)
 	st.Day(logDate).Items = append([]store.Item{}, items...)
 
@@ -1697,7 +1697,7 @@ func TestSaveFailureIsReportedNotSwallowed(t *testing.T) {
 	}
 
 	a := startLog(t, rowOf("甲", "09:00", "10:00"))
-	a.store.Path = filepath.Join(blocker, "nope", "mano.md")
+	a.store.Path = filepath.Join(blocker, "nope", "orgmaid.org")
 	park(t, a, fStartHour)
 
 	send(t, a, kt(tea.KeyUp))

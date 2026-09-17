@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Serialize renders the journal back to markdown. Days are written in the order
+// Serialize renders the journal back to org-mode. Days are written in the order
 // they are held, which Parse and Save both keep ascending.
 func (j Journal) Serialize() []byte {
 	var b bytes.Buffer
@@ -14,19 +14,17 @@ func (j Journal) Serialize() []byte {
 		if i > 0 {
 			b.WriteByte('\n')
 		}
-		fmt.Fprintf(&b, "# %s\n", day.CompactDate())
+		fmt.Fprintf(&b, "* %s\n", day.Date)
 
-		for n, item := range day.Items {
-			fmt.Fprintf(&b, "\n%d. %s\n", n+1, item.Content)
-			if item.Start == nil && item.End == nil {
-				continue
-			}
-			b.WriteByte('\n')
-			if item.Start != nil {
-				fmt.Fprintf(&b, "- START: %s\n", item.Start)
-			}
-			if item.End != nil {
-				fmt.Fprintf(&b, "- END: %s\n", item.End)
+		for _, item := range day.Items {
+			fmt.Fprintf(&b, "** %s\n", item.Content)
+			if item.Start != nil || item.End != nil {
+				if item.Start != nil {
+					fmt.Fprintf(&b, "   - START: %s\n", item.Start)
+				}
+				if item.End != nil {
+					fmt.Fprintf(&b, "   - END: %s\n", item.End)
+				}
 			}
 		}
 	}

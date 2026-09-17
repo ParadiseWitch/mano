@@ -6,7 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"mano/internal/keys"
+	"orgmaid/internal/keys"
 )
 
 type helpEntry struct {
@@ -32,7 +32,7 @@ var helpSections = []struct {
 		{"p", "把复制的项粘贴为最后一项并选中"},
 		{"c", "打开日期选择页"},
 		{"?", "打开本页"},
-		{"q", "退出 mano"},
+		{"q", "退出 orgmaid"},
 	}},
 	{"日志页 | 一行的八个停靠点", []helpEntry{
 		{"Tab", "在停靠点之间移动，两端环绕（Shift+Tab 反向）"},
@@ -69,7 +69,7 @@ var helpSections = []struct {
 	}},
 	{"通用", []helpEntry{
 		{"Ctrl+C", "在任意页面强制退出"},
-		{"", "所有修改即时写入 ~/.mano/mano.md，退出无需保存"},
+		{"", "所有修改即时写入 ~/.orgmaid/orgmaid.org，退出无需保存"},
 	}},
 }
 
@@ -139,7 +139,7 @@ func (a *App) viewHelp() string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		spread(a.width, titleStyle.Render("快捷键"), dimStyle.Render("mano")),
+		spread(a.width, titleStyle.Render("快捷键"), dimStyle.Render("orgmaid")),
 		divider(a.width),
 		lipgloss.JoinVertical(lipgloss.Left, window...),
 		divider(a.width),

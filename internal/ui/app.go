@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"mano/internal/config"
-	"mano/internal/store"
+	"orgmaid/internal/config"
+	"orgmaid/internal/store"
 )
 
 type page int

@@ -10,7 +10,7 @@ import (
 // Windows has no permission bits: os.Stat reports every file as 0666 no matter
 // what mode Save asked for, so there is nothing to assert there.
 func TestSaveSetsPrivatePermissions(t *testing.T) {
-	s := &Store{Path: t.TempDir() + "/nested/mano.md"}
+	s := &Store{Path: t.TempDir() + "/nested/orgmaid.org"}
 	s.Journal.EnsureDay("2026-08-01")
 
 	if err := s.Save(); err != nil {
