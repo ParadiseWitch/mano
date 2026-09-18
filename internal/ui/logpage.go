@@ -693,14 +693,14 @@ func (a *App) renderRow(i int, it store.Item) string {
 
 	mark := " "
 	if selected {
-		mark = ">"
+		mark = "\uf054"
 	}
 
 	row := cell(mark, colMark, lipgloss.Left, fg(pal.Warn), ground) +
 		lipgloss.JoinHorizontal(lipgloss.Top,
 			a.indexCell(i+1, ground, focus == fIndex),
-			a.clockCell(it.Start, fg(pal.Start), ground, focus == fStartHour, focus == fStartMinute),
-			a.clockCell(it.End, fg(pal.End), ground, focus == fEndHour, focus == fEndMinute),
+			a.clockCell(it.Start, fg(pal.Start), ground, focus == fStartHour, focus == fStartMinute, "-") +
+			a.clockCell(it.End, fg(pal.End), ground, focus == fEndHour, focus == fEndMinute, " "),
 			a.durationCell(it, ground, focus == fDurHour, focus == fDurMinute),
 			a.contentCell(it, ground, selected, selected && l.editing),
 		)
@@ -721,7 +721,7 @@ func (a *App) indexCell(n int, ground lipgloss.TerminalColor, active bool) strin
 // block. An unset clock is a placeholder rather than a reading, so it takes the
 // secondary colour; the block still lands on the half the cursor is on, because
 // an empty clock is as fillable as a full one.
-func (a *App) clockCell(t *store.Time, accent, ground lipgloss.TerminalColor, hourActive, minuteActive bool) string {
+func (a *App) clockCell(t *store.Time, accent, ground lipgloss.TerminalColor, hourActive, minuteActive bool, trail string) string {
 	ink := accent
 	if t == nil {
 		ink = fg(pal.Dim)
@@ -737,7 +737,7 @@ func (a *App) clockCell(t *store.Time, accent, ground lipgloss.TerminalColor, ho
 		run(hour, choose(hourActive, fg(pal.Ink), ink), choose(hourActive, bg(pal.Field), ground)) +
 		run(sep, ink, ground) +
 		run(minute, choose(minuteActive, fg(pal.Ink), ink), choose(minuteActive, bg(pal.Field), ground)) +
-		run(" ", ink, ground)
+		run(trail, ink, ground)
 }
 
 // durationCell is the span column, editable through the end time standing behind
