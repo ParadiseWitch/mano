@@ -33,7 +33,7 @@ type dateState struct {
 func newDateState() dateState {
 	search := textinput.New()
 	search.Prompt = ""
-	return dateState{counts: map[string]int{}, search: search}
+	return dateState{counts: map[string]int{}, search: search, calMode: true}
 }
 
 // reset rebuilds the list from the journal: every day that has a header, plus
@@ -491,11 +491,6 @@ func (a *App) viewCalendar() string {
 	d := &a.dates
 	year, month := d.calYear, d.calMonth
 
-	// Header with month/year and navigation hints
-	header := titleStyle.Render(fmt.Sprintf("\uf073 %d年 %s", year, monthName(month)))
-	right := dimStyle.Render("h/l 前后天 | H/L 上下月 | Tab 返回")
-	titleRow := spread(a.width, header, right)
-
 	// Calendar width: 7 days * 3 chars (2 digits + 1 space) = 21 chars
 	calWidth := 21
 	calLeft := (a.width - calWidth) / 2
@@ -503,6 +498,24 @@ func (a *App) viewCalendar() string {
 		calLeft = 0
 	}
 	leftPad := strings.Repeat(" ", calLeft)
+
+	// Header with month/year - centered
+	header := titleStyle.Render(fmt.Sprintf("\uf073 %d年 %s", year, monthName(month)))
+	headerWidth := lipgloss.Width(header)
+	headerLeft := (a.width - headerWidth) / 2
+	if headerLeft < 0 {
+		headerLeft = 0
+	}
+	titleRow := strings.Repeat(" ", headerLeft) + header
+
+	// Key hints below the header
+	hints := dimStyle.Render("h/l 前后天 | j/k 上下周 | H/L 上下月 | s 今天 | Tab 列表")
+	hintsWidth := lipgloss.Width(hints)
+	hintsLeft := (a.width - hintsWidth) / 2
+	if hintsLeft < 0 {
+		hintsLeft = 0
+	}
+	hintsRow := strings.Repeat(" ", hintsLeft) + hints
 
 	// Weekday headers - centered
 	weekdays := "日 一 二 三 四 五 六"
@@ -514,6 +527,7 @@ func (a *App) viewCalendar() string {
 
 	var rows []string
 	rows = append(rows, titleRow)
+	rows = append(rows, hintsRow)
 	rows = append(rows, divider(a.width))
 	rows = append(rows, weekdayRow)
 
