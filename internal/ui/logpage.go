@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -589,7 +590,13 @@ func (a *App) copyItem() {
 	}
 	clone := items[i].Clone()
 	a.log.clipboard = &clone
-	a.status = "已复制第 " + strconv.Itoa(i+1) + " 项"
+
+	// Copy content to system clipboard
+	if err := clipboard.WriteAll(clone.Content); err != nil {
+		a.status = "已复制第 " + strconv.Itoa(i+1) + " 项（剪贴板写入失败）"
+	} else {
+		a.status = "已复制第 " + strconv.Itoa(i+1) + " 项到剪贴板"
+	}
 }
 
 func (a *App) pasteItem() {
