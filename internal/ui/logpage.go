@@ -19,6 +19,7 @@ import (
 // costs seven presses of Tab.
 const (
 	fIndex = iota
+	fTodo
 	fStartHour
 	fStartMinute
 	fEndHour
@@ -31,7 +32,7 @@ const (
 
 // stopNames labels every stop for the key-hint bar.
 var stopNames = [stopCount]string{
-	"序号", "开始 小时", "开始 分钟", "结束 小时", "结束 分钟",
+	"序号", "待办", "开始 小时", "开始 分钟", "结束 小时", "结束 分钟",
 	"耗时 小时", "耗时 分钟", "内容",
 }
 
@@ -42,10 +43,10 @@ func hourStop(field int) bool {
 	return field == fStartHour || field == fEndHour || field == fDurHour
 }
 
-// timeStop reports whether a stop takes typed digits. The index and the content
+// timeStop reports whether a stop takes typed digits. The index, todo, and content
 // leave digits to the jump machine instead.
 func timeStop(field int) bool {
-	return field > fIndex && field < fContent
+	return field > fTodo && field < fContent
 }
 
 type logState struct {
@@ -255,11 +256,19 @@ func (a *App) stopKey(k tea.KeyMsg) tea.Cmd {
 	measured := timeStop(a.log.field)
 	switch k.Type {
 	case tea.KeyUp:
+		if a.log.field == fTodo {
+			a.cycleTodo()
+			return nil
+		}
 		if measured {
 			return a.adjustStop(1)
 		}
 		a.moveItem(-1)
 	case tea.KeyDown:
+		if a.log.field == fTodo {
+			a.cycleTodo()
+			return nil
+		}
 		if measured {
 			return a.adjustStop(-1)
 		}
@@ -781,7 +790,7 @@ func (a *App) renderRow(i int, it store.Item) string {
 	row := cell(mark, colMark, lipgloss.Left, fg(pal.Warn), ground) +
 		lipgloss.JoinHorizontal(lipgloss.Top,
 			a.indexCell(i+1, ground, focus == fIndex),
-			a.todoCell(it.Todo, ground),
+			a.todoCell(it.Todo, ground, focus == fTodo),
 			a.clockCell(it.Start, fg(pal.Start), ground, focus == fStartHour, focus == fStartMinute, " -")+
 				a.clockCell(it.End, fg(pal.End), ground, focus == fEndHour, focus == fEndMinute, "  "),
 			a.durationCell(it, ground, focus == fDurHour, focus == fDurMinute),
@@ -800,18 +809,31 @@ func (a *App) indexCell(n int, ground lipgloss.TerminalColor, active bool) strin
 }
 
 // todoCell shows the TODO/DONE status in its own column.
-func (a *App) todoCell(todo string, ground lipgloss.TerminalColor) string {
+func (a *App) todoCell(todo string, ground lipgloss.TerminalColor, active bool) string {
 	text := ""
 	col := fg(pal.Dim)
+	todoGround := ground
 	switch todo {
 	case "TODO":
-		text = "TODO"
-		col = fg(pal.Warn)
+		text = " TODO "
+		col = fg(pal.Ink)
+		if active {
+			todoGround = bg(pal.Start)
+		} else {
+			todoGround = bg("#3b6a9b")
+		}
 	case "DONE":
-		text = "DONE"
-		col = fg(pal.Start)
+		text = " DONE "
+		col = fg(pal.Ink)
+		if active {
+			todoGround = bg(pal.Crossed)
+		} else {
+			todoGround = bg("#4a7a5a")
+		}
+	default:
+		text = "      "
 	}
-	return cell(text, colTodo, lipgloss.Left, col, ground)
+	return cell(text, colTodo, lipgloss.Center, col, todoGround)
 }
 
 // clockCell is one of the two time columns: the reading in its own accent with a
@@ -946,6 +968,8 @@ func (a *App) stopHints() string {
 		return "\uf044 内容 j/k 换项 J/K 挪 i 编辑 o 新建 t 待办 T 全局 , 标签 c 日期 q 退出"
 	case fIndex:
 		return "\uf0cb 序号 j/k 换项 J/K 挪本项 Tab 换列 ? 帮助 Esc 回内容"
+	case fTodo:
+		return "\uf0ae 待办 ↑/↓ 切换状态 Tab 换列 Esc 回内容"
 	}
 
 	// The clock stops take one half of a reading at a time and can be filled from

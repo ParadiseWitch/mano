@@ -237,14 +237,14 @@ func isQuit(t *testing.T, cmd tea.Cmd) bool {
 }
 
 func TestStopsAreNumberedAsTheModelAssumes(t *testing.T) {
-	got := []int{fIndex, fStartHour, fStartMinute, fEndHour, fEndMinute, fDurHour, fDurMinute, fContent}
+	got := []int{fIndex, fTodo, fStartHour, fStartMinute, fEndHour, fEndMinute, fDurHour, fDurMinute, fContent}
 	for i, s := range got {
 		if s != i {
 			t.Errorf("stop %d = %d, want %d", i, s, i)
 		}
 	}
-	if stopCount != 8 {
-		t.Errorf("stopCount = %d, want 8", stopCount)
+	if stopCount != 9 {
+		t.Errorf("stopCount = %d, want 9", stopCount)
 	}
 	if n := len(stopNames); n != stopCount {
 		t.Errorf("stopNames holds %d names, want %d", n, stopCount)
@@ -256,6 +256,7 @@ func TestStopsAreNumberedAsTheModelAssumes(t *testing.T) {
 		hour bool
 	}{
 		{"index", fIndex, false},
+		{"todo", fTodo, false},
 		{"start hour", fStartHour, true},
 		{"start minute", fStartMinute, false},
 		{"end hour", fEndHour, true},
@@ -274,6 +275,7 @@ func TestStopsAreNumberedAsTheModelAssumes(t *testing.T) {
 		time bool
 	}{
 		{"index", fIndex, false},
+		{"todo", fTodo, false},
 		{"content", fContent, false},
 		{"start hour", fStartHour, true},
 		{"duration minute", fDurMinute, true},
@@ -305,17 +307,18 @@ func TestStopsFormARing(t *testing.T) {
 	}{
 		{"tab from the content stop reaches the index", []stroke{kt(tea.KeyTab)}, fIndex},
 		{"shift+tab from the content stop backs into the duration minute", []stroke{kt(tea.KeyShiftTab)}, fDurMinute},
-		{"one tab past the index is the start hour", presses(tea.KeyTab, 2), fStartHour},
+		{"one tab past the index is the todo stop", presses(tea.KeyTab, 2), fTodo},
+		{"two tabs past the index is the start hour", presses(tea.KeyTab, 3), fStartHour},
 		{"one shift+tab past the duration minute is the duration hour", presses(tea.KeyShiftTab, 2), fDurHour},
-		{"seven tabs run down to the duration minute", presses(tea.KeyTab, 7), fDurMinute},
-		{"an eighth tab completes the lap", presses(tea.KeyTab, 8), fContent},
-		{"eight shift+tabs also complete the lap", presses(tea.KeyShiftTab, 8), fContent},
+		{"eight tabs run down to the duration minute", presses(tea.KeyTab, 8), fDurMinute},
+		{"a ninth tab completes the lap", presses(tea.KeyTab, 9), fContent},
+		{"nine shift+tabs also complete the lap", presses(tea.KeyShiftTab, 9), fContent},
 		{"shift+tab undoes tab", []stroke{kt(tea.KeyTab), kt(tea.KeyShiftTab)}, fContent},
 		{"tab undoes shift+tab", []stroke{kt(tea.KeyShiftTab), kt(tea.KeyTab)}, fContent},
 		{"0 picks the index stop from the content stop", typed("0"), fIndex},
 		{"0 on the index stop stays on it", typed("00"), fIndex},
-		{"Esc off a stop returns to the content", append(presses(tea.KeyTab, 2), kt(tea.KeyEsc)), fContent},
-		{"Enter off a stop returns to the content", append(presses(tea.KeyShiftTab, 2), kt(tea.KeyEnter)), fContent},
+		{"Esc off a stop returns to the content", append(presses(tea.KeyTab, 3), kt(tea.KeyEsc)), fContent},
+		{"Enter off a stop returns to the content", append(presses(tea.KeyShiftTab, 3), kt(tea.KeyEnter)), fContent},
 		{"h no longer walks the row", typed("h"), fContent},
 		{"l no longer walks the row", typed("l"), fContent},
 		{"the left arrow no longer walks the row", []stroke{kt(tea.KeyLeft)}, fContent},
@@ -342,7 +345,7 @@ func TestStopsFormARing(t *testing.T) {
 
 	t.Run("the stops come in the order the columns are drawn", func(t *testing.T) {
 		a := startLog(t, rowOf("甲", "09:00", "10:00"))
-		order := []int{fIndex, fStartHour, fStartMinute, fEndHour, fEndMinute, fDurHour, fDurMinute, fContent}
+		order := []int{fIndex, fTodo, fStartHour, fStartMinute, fEndHour, fEndMinute, fDurHour, fDurMinute, fContent}
 
 		for i, stop := range order {
 			send(t, a, kt(tea.KeyTab))

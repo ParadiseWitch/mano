@@ -16,7 +16,7 @@ import (
 const (
 	colMark     = 2 // selection marker plus the space after it
 	colIndex    = 3
-	colTodo     = 5 // TODO/DONE status
+	colTodo     = 6 // " TODO " or " DONE " with spaces
 	colTime     = 8
 	colDuration = 8
 	rowMargin   = 1
