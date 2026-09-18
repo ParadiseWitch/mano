@@ -290,7 +290,7 @@ func (a *App) renderDateRow(i int) string {
 
 	marker := "  "
 	if selected {
-		marker = "\uf054 "
+		marker = "\uf0da "
 	}
 
 	dateFG, countFG := fg(pal.Text), fg(pal.Dim)

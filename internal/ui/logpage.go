@@ -693,14 +693,14 @@ func (a *App) renderRow(i int, it store.Item) string {
 
 	mark := " "
 	if selected {
-		mark = "\uf054"
+		mark = "\uf0da"
 	}
 
 	row := cell(mark, colMark, lipgloss.Left, fg(pal.Warn), ground) +
 		lipgloss.JoinHorizontal(lipgloss.Top,
 			a.indexCell(i+1, ground, focus == fIndex),
-			a.clockCell(it.Start, fg(pal.Start), ground, focus == fStartHour, focus == fStartMinute, "-") +
-			a.clockCell(it.End, fg(pal.End), ground, focus == fEndHour, focus == fEndMinute, " "),
+			a.clockCell(it.Start, fg(pal.Start), ground, focus == fStartHour, focus == fStartMinute, " -") +
+			a.clockCell(it.End, fg(pal.End), ground, focus == fEndHour, focus == fEndMinute, "  "),
 			a.durationCell(it, ground, focus == fDurHour, focus == fDurMinute),
 			a.contentCell(it, ground, selected, selected && l.editing),
 		)
