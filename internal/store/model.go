@@ -46,10 +46,14 @@ func NowTime() Time {
 func Today() string { return time.Now().Format(DateLayout) }
 
 // Item is one logged entry. Start and End are nil when unset.
+// Todo holds the TODO keyword ("TODO", "DONE", or "" for none).
+// Tags holds zero or more org-mode tags.
 type Item struct {
 	Content string
 	Start   *Time
 	End     *Time
+	Todo    string
+	Tags    []string
 }
 
 // Duration is the elapsed span of the item, and whether it crosses midnight.
@@ -85,7 +89,7 @@ func (it *Item) AddDuration(minutes int) bool {
 }
 
 // Clone is a deep copy: the time pointers are duplicated so editing one item
-// cannot reach through into another.
+// cannot reach through into another. Tags slice is also copied.
 func (it Item) Clone() Item {
 	out := it
 	if it.Start != nil {
@@ -95,6 +99,10 @@ func (it Item) Clone() Item {
 	if it.End != nil {
 		end := *it.End
 		out.End = &end
+	}
+	if it.Tags != nil {
+		out.Tags = make([]string, len(it.Tags))
+		copy(out.Tags, it.Tags)
 	}
 	return out
 }

@@ -9,7 +9,7 @@ import (
 
 var (
 	dateHeaderRe = regexp.MustCompile(`^\* ([0-9]{4}-[0-9]{2}-[0-9]{2})$`)
-	itemRe       = regexp.MustCompile(`^\*\* (.*)$`)
+	itemRe       = regexp.MustCompile(`^\*\* (?:(TODO|DONE) )?(.*?)(\s+:[a-zA-Z0-9_]+(?::[a-zA-Z0-9_]+)*:)?$`)
 	fieldRe      = regexp.MustCompile(`(?i)^   - (START|END)\s*:\s*([0-9]{1,2}:[0-9]{2})\s*$`)
 )
 
@@ -47,7 +47,14 @@ func Parse(data []byte) Journal {
 		}
 
 		if m := itemRe.FindStringSubmatch(line); m != nil {
-			j.Days[dayIdx].Items = append(j.Days[dayIdx].Items, Item{Content: m[1]})
+			item := Item{Content: strings.TrimSpace(m[2])}
+			if m[1] != "" {
+				item.Todo = m[1]
+			}
+			if m[3] != "" {
+				item.Tags = parseTags(m[3])
+			}
+			j.Days[dayIdx].Items = append(j.Days[dayIdx].Items, item)
 			itemIdx = len(j.Days[dayIdx].Items) - 1
 			continue
 		}
@@ -93,4 +100,17 @@ func (j *Journal) mergeDuplicateDays() {
 		merged = append(merged, day)
 	}
 	j.Days = merged
+}
+
+// parseTags extracts tags from a string like " :tag1:tag2:".
+func parseTags(s string) []string {
+	s = strings.TrimSpace(s)
+	parts := strings.Split(s, ":")
+	var tags []string
+	for _, p := range parts {
+		if p != "" {
+			tags = append(tags, p)
+		}
+	}
+	return tags
 }

@@ -63,6 +63,17 @@ var helpSections = []struct {
 		{"Backspace", "删除光标前一个字符"},
 		{"Enter / Esc", "提交并回到内容列"},
 	}, helpFromLog},
+	{"日志页 | TODO 与标签", []helpEntry{
+		{"t", "循环当前项的 TODO 状态：无 → TODO → DONE → 无"},
+		{",", "编辑当前项的标签，空格分隔，Enter 保存"},
+		{"T", "打开全局 TODO 视图，查看所有未完成事项"},
+	}, helpFromLog},
+	{"全局 TODO 视图", []helpEntry{
+		{"j / k", "上下移动"},
+		{"t", "循环选中项的 TODO 状态"},
+		{"Enter", "跳转到该日期并选中该项"},
+		{"Esc / q", "返回日志页"},
+	}, -1},
 	{"日期选择页 | 列表模式", []helpEntry{
 		{"j / k", "下移、上移一个日期（上下方向键同效）"},
 		{"h / l", "上一页、下一页（左右方向键同效）"},

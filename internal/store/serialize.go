@@ -3,6 +3,7 @@ package store
 import (
 	"bytes"
 	"fmt"
+	"strings"
 )
 
 // Serialize renders the journal back to org-mode. Days are written in the order
@@ -17,7 +18,18 @@ func (j Journal) Serialize() []byte {
 		fmt.Fprintf(&b, "* %s\n", day.Date)
 
 		for _, item := range day.Items {
-			fmt.Fprintf(&b, "** %s\n", item.Content)
+			b.WriteString("** ")
+			if item.Todo != "" {
+				b.WriteString(item.Todo)
+				b.WriteByte(' ')
+			}
+			b.WriteString(item.Content)
+			if len(item.Tags) > 0 {
+				b.WriteString("  :")
+				b.WriteString(strings.Join(item.Tags, ":"))
+				b.WriteString(":")
+			}
+			b.WriteByte('\n')
 			if item.Start != nil || item.End != nil {
 				if item.Start != nil {
 					fmt.Fprintf(&b, "   - START: %s\n", item.Start)

@@ -60,6 +60,10 @@ type logState struct {
 	// tensNext is whose turn the next typed digit is: the tens first, then the
 	// ones, so two presses fill one reading.
 	tensNext bool
+
+	// Tag editing state
+	tagEditing bool
+	tagEditor  textinput.Model
 }
 
 // newLogState starts on the content stop, which is where a row is read from and
@@ -67,13 +71,17 @@ type logState struct {
 func newLogState() logState {
 	editor := textinput.New()
 	editor.Prompt = ""
-	return logState{field: fContent, tensNext: true, editor: editor}
+	tagEditor := textinput.New()
+	tagEditor.Prompt = "标签: "
+	return logState{field: fContent, tensNext: true, editor: editor, tagEditor: tagEditor}
 }
 
 func (a *App) updateLog(k tea.KeyMsg) tea.Cmd {
 	a.status = ""
 
 	switch {
+	case a.log.tagEditing:
+		return a.updateTagEdit(k)
 	case a.log.editing:
 		return a.updateLogEdit(k)
 	case a.log.field != fContent:
@@ -180,6 +188,12 @@ func (a *App) rowCommand(r rune) (tea.Cmd, bool) {
 		a.pasteItem()
 	case 'c':
 		a.openDates()
+	case 't':
+		a.cycleTodo()
+	case 'T':
+		a.openTodos()
+	case ',':
+		return a.editTags(), true
 	case 'q':
 		return tea.Quit, true
 	case '?':
@@ -437,6 +451,19 @@ func (a *App) updateLogEdit(k tea.KeyMsg) tea.Cmd {
 	return cmd
 }
 
+func (a *App) updateTagEdit(k tea.KeyMsg) tea.Cmd {
+	switch k.Type {
+	case tea.KeyCtrlC:
+		return tea.Quit
+	case tea.KeyEsc, tea.KeyEnter:
+		a.commitTagEdit()
+		return nil
+	}
+	var cmd tea.Cmd
+	a.log.tagEditor, cmd = a.log.tagEditor.Update(k)
+	return cmd
+}
+
 // onTick expires a half-typed gg or dd.
 func (a *App) onTick(now time.Time) tea.Cmd {
 	if a.page != pageLog || a.log.editing {
@@ -568,6 +595,60 @@ func (a *App) pasteItem() {
 	a.status = "已粘贴到第 " + strconv.Itoa(len(day.Items)) + " 项"
 }
 
+// cycleTodo cycles the TODO state of the current item: "" → "TODO" → "DONE" → "".
+func (a *App) cycleTodo() {
+	item := a.focusItem()
+	if item == nil {
+		return
+	}
+	switch item.Todo {
+	case "":
+		item.Todo = "TODO"
+		a.status = "标记为待办"
+	case "TODO":
+		item.Todo = "DONE"
+		a.status = "标记为完成"
+	case "DONE":
+		item.Todo = ""
+		a.status = "取消标记"
+	}
+	a.save()
+}
+
+// editTags opens the tag editor for the current item.
+func (a *App) editTags() tea.Cmd {
+	item := a.focusItem()
+	if item == nil {
+		return nil
+	}
+	l := &a.log
+	l.tagEditing = true
+	l.tagEditor.SetValue(strings.Join(item.Tags, " "))
+	l.tagEditor.Width = a.width - 10
+	l.tagEditor.CursorEnd()
+	return l.tagEditor.Focus()
+}
+
+// commitTagEdit saves the tags from the editor.
+func (a *App) commitTagEdit() {
+	l := &a.log
+	l.tagEditor.Blur()
+	if item := a.focusItem(); item != nil {
+		raw := strings.Fields(l.tagEditor.Value())
+		seen := map[string]bool{}
+		var tags []string
+		for _, t := range raw {
+			if !seen[t] {
+				seen[t] = true
+				tags = append(tags, t)
+			}
+		}
+		item.Tags = tags
+		a.save()
+	}
+	l.tagEditing = false
+}
+
 // focusItem is the item the stops read and write, or nil when the day is empty.
 func (a *App) focusItem() *store.Item {
 	day := a.editableDay()
@@ -693,11 +774,18 @@ func (a *App) renderRow(i int, it store.Item) string {
 	}
 
 	mark := " "
+	markColor := fg(pal.Warn)
 	if selected {
 		mark = "\uf0da"
+	} else if it.Todo == "TODO" {
+		mark = "\uf111"
+		markColor = fg(pal.Warn)
+	} else if it.Todo == "DONE" {
+		mark = "\uf00c"
+		markColor = fg(pal.Start)
 	}
 
-	row := cell(mark, colMark, lipgloss.Left, fg(pal.Warn), ground) +
+	row := cell(mark, colMark, lipgloss.Left, markColor, ground) +
 		lipgloss.JoinHorizontal(lipgloss.Top,
 			a.indexCell(i+1, ground, focus == fIndex),
 			a.clockCell(it.Start, fg(pal.Start), ground, focus == fStartHour, focus == fStartMinute, " -")+
@@ -795,6 +883,13 @@ func (a *App) contentCell(it store.Item, ground lipgloss.TerminalColor, selected
 	if text == "" {
 		text = "（无内容）"
 	}
+
+	// Append tags in dim color
+	if len(it.Tags) > 0 {
+		tagStr := "  :" + strings.Join(it.Tags, ":") + ":"
+		text += tagStr
+	}
+
 	return cell(text, width, lipgloss.Left, col, ground)
 }
 
@@ -813,10 +908,11 @@ func (a *App) renderTitle() string {
 func (a *App) renderStatus() string {
 	text := a.stopHints()
 
-	if pending := a.pendingText(); pending != "" {
+	if a.log.tagEditing {
+		text = "\uf02c 标签编辑 | " + a.log.tagEditor.View() + " | Enter 或 Esc 保存"
+	} else if pending := a.pendingText(); pending != "" {
 		text = "[" + pending + "] " + text
-	}
-	if a.status != "" {
+	} else if a.status != "" {
 		text = a.status + " | " + text
 	}
 
@@ -838,7 +934,7 @@ func (a *App) stopHints() string {
 	name := stopNames[l.field]
 	switch l.field {
 	case fContent:
-		return "\uf044 内容 j/k 换项 J/K 挪本项 Tab 换列 i 编辑 o 新建 dd 删 y/p 复制 c 日期 q 退出"
+		return "\uf044 内容 j/k 换项 J/K 挪 i 编辑 o 新建 t 待办 T 全局 , 标签 c 日期 q 退出"
 	case fIndex:
 		return "\uf0cb 序号 j/k 换项 J/K 挪本项 Tab 换列 ? 帮助 Esc 回内容"
 	}

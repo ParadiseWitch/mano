@@ -1725,7 +1725,7 @@ func TestTheHintBarDescribesTheStopItSitsOn(t *testing.T) {
 		{fEndMinute, "结束 分钟 | ↑ 加 ↓ 减 每次 5 循环 | 数字 十位→个位 s 现在 | Tab 换列 Esc 回内容"},
 		{fDurHour, "耗时 小时 | ↑ 加 ↓ 减 每次 1 循环 | 数字 写回结束时间 | Tab 换列 Esc 回内容"},
 		{fDurMinute, "耗时 分钟 | ↑ 加 ↓ 减 每次 5 循环 | 数字 写回结束时间 | Tab 换列 Esc 回内容"},
-		{fContent, "\uf044 内容 j/k 换项 J/K 挪本项 Tab 换列 i 编辑 o 新建 dd 删 y/p 复制 c 日期 q 退出"},
+		{fContent, "\uf044 内容 j/k 换项 J/K 挪 i 编辑 o 新建 t 待办 T 全局 , 标签 c 日期 q 退出"},
 	}
 
 	for _, c := range cases {

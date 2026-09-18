@@ -14,6 +14,7 @@ type page int
 const (
 	pageLog page = iota
 	pageDates
+	pageTodos
 	pageHelp
 )
 
@@ -38,6 +39,7 @@ type App struct {
 
 	log        logState
 	dates      dateState
+	todos      todoState
 	helpOffset int
 	helpFrom   helpContext // which page help was opened from
 }
@@ -79,6 +81,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, a.updateLog(msg)
 		case pageDates:
 			return a, a.updateDates(msg)
+		case pageTodos:
+			return a, a.updateTodos(msg)
 		default:
 			return a, a.updateHelp(msg)
 		}
@@ -107,6 +111,8 @@ func (a *App) View() string {
 	switch a.page {
 	case pageDates:
 		frame = a.viewDates()
+	case pageTodos:
+		frame = a.viewTodos()
 	case pageHelp:
 		frame = a.viewHelp()
 	default:
