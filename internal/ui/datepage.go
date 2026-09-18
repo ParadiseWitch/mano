@@ -96,10 +96,10 @@ func (a *App) updateDates(k tea.KeyMsg) tea.Cmd {
 		if r, ok := keys.SingleRune(k); ok {
 			switch r {
 			case 'h':
-				d.moveCalendarMonth(-1)
+				d.moveCalendar(-1)
 				return nil
 			case 'l':
-				d.moveCalendarMonth(1)
+				d.moveCalendar(1)
 				return nil
 			case 'j':
 				d.moveCalendar(7)
@@ -108,16 +108,22 @@ func (a *App) updateDates(k tea.KeyMsg) tea.Cmd {
 				d.moveCalendar(-7)
 				return nil
 			case 'H':
-				d.moveCalendar(-1)
+				d.moveCalendarMonth(-1)
 				return nil
 			case 'L':
-				d.moveCalendar(1)
+				d.moveCalendarMonth(1)
 				return nil
 			case 'K':
-				d.moveCalendar(-7)
+				d.moveCalendarMonth(-1)
 				return nil
 			case 'J':
-				d.moveCalendar(7)
+				d.moveCalendarMonth(1)
+				return nil
+			case 's':
+				// Jump to today
+				today := store.Today()
+				d.calCursor = today
+				d.calYear, d.calMonth, _ = parseDateParts(today)
 				return nil
 			case 'q':
 				return tea.Quit
@@ -411,7 +417,7 @@ func (a *App) renderDateStatus() string {
 
 	var hints string
 	if d.calMode {
-		hints = "日历 | j/k 上下周 | h/l 上下月 | H/L 前一天/后一天 | Tab 返回列表 | Enter 打开 | Esc 返回 | q 退出"
+		hints = "日历 | h/l 前后天 | j/k 上下周 | H/L 上下月 | s 今天 | Tab 返回列表 | Enter 打开 | Esc 返回 | q 退出"
 	} else {
 		hints = "列表 | j/k 选择 | h/l 翻页 | / 搜索 | Tab 切换日历 | Enter 打开 | Esc 返回 | ? 帮助 | q 退出"
 	}
@@ -487,12 +493,20 @@ func (a *App) viewCalendar() string {
 
 	// Header with month/year and navigation hints
 	header := titleStyle.Render(fmt.Sprintf("\uf073 %d年 %s", year, monthName(month)))
-	right := dimStyle.Render("h/l 切换月份 | Tab 返回列表视图")
+	right := dimStyle.Render("h/l 前后天 | H/L 上下月 | Tab 返回")
 	titleRow := spread(a.width, header, right)
 
-	// Weekday headers
-	weekdays := "日  一  二  三  四  五  六"
-	weekdayRow := cell(weekdays, a.width, lipgloss.Center, fg(pal.Dim), transparent)
+	// Calendar width: 7 days * 3 chars (2 digits + 1 space) = 21 chars
+	calWidth := 21
+	calLeft := (a.width - calWidth) / 2
+	if calLeft < 0 {
+		calLeft = 0
+	}
+	leftPad := strings.Repeat(" ", calLeft)
+
+	// Weekday headers - centered
+	weekdays := "日 一 二 三 四 五 六"
+	weekdayRow := leftPad + dimStyle.Render(weekdays)
 
 	// Calculate calendar grid
 	firstDay := firstDayOfMonth(year, month)
@@ -506,10 +520,12 @@ func (a *App) viewCalendar() string {
 	// Build weeks
 	day := 1
 	for week := 0; week < 6 && day <= totalDays; week++ {
-		var weekCells []string
+		var weekLine strings.Builder
+		weekLine.WriteString(leftPad)
+
 		for dow := 0; dow < 7; dow++ {
 			if (week == 0 && dow < firstDay) || day > totalDays {
-				weekCells = append(weekCells, cell("  ", 2, lipgloss.Center, fg(pal.Dim), transparent))
+				weekLine.WriteString("   ")
 			} else {
 				dateStr := formatDate(year, month, day)
 				isToday := dateStr == store.Today()
@@ -526,11 +542,14 @@ func (a *App) viewCalendar() string {
 						Bold(true)
 					text = fmt.Sprintf("%2d", day)
 				} else if isToday {
+					// Today: bold + underline
 					style = lipgloss.NewStyle().
 						Foreground(fg(pal.Warn)).
-						Bold(true)
+						Bold(true).
+						Underline(true)
 					text = fmt.Sprintf("%2d", day)
 				} else if hasEntry {
+					// Has entries: show with a dot indicator below
 					style = lipgloss.NewStyle().
 						Foreground(fg(pal.Start))
 					text = fmt.Sprintf("%2d", day)
@@ -540,11 +559,31 @@ func (a *App) viewCalendar() string {
 					text = fmt.Sprintf("%2d", day)
 				}
 
-				weekCells = append(weekCells, style.Render(text))
+				weekLine.WriteString(style.Render(text))
+				weekLine.WriteString(" ")
 				day++
 			}
 		}
-		rows = append(rows, strings.Join(weekCells, " "))
+		rows = append(rows, weekLine.String())
+
+		// Add indicator row for dots (today underline is handled above)
+		var indicatorLine strings.Builder
+		indicatorLine.WriteString(leftPad)
+		dayInWeek := 1 + week*7
+		for dow := 0; dow < 7; dow++ {
+			actualDay := dayInWeek + dow
+			if (week == 0 && dow < firstDay) || actualDay > totalDays {
+				indicatorLine.WriteString("   ")
+			} else {
+				dateStr := formatDate(year, month, actualDay)
+				if d.hasEntry(dateStr) && dateStr != store.Today() {
+					indicatorLine.WriteString(lipgloss.NewStyle().Foreground(fg(pal.Start)).Render("·") + "  ")
+				} else {
+					indicatorLine.WriteString("   ")
+				}
+			}
+		}
+		rows = append(rows, indicatorLine.String())
 	}
 
 	// Fill remaining rows to maintain height
