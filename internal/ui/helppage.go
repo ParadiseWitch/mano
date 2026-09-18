@@ -18,7 +18,7 @@ type helpEntry struct {
 type helpContext int
 
 const (
-	helpFromLog  helpContext = iota
+	helpFromLog helpContext = iota
 	helpFromDate
 )
 

@@ -184,7 +184,7 @@ func (a *App) rowCommand(r rune) (tea.Cmd, bool) {
 		return tea.Quit, true
 	case '?':
 		a.page = pageHelp
-			a.helpFrom = helpFromLog
+		a.helpFrom = helpFromLog
 	default:
 		return nil, false
 	}
@@ -700,8 +700,8 @@ func (a *App) renderRow(i int, it store.Item) string {
 	row := cell(mark, colMark, lipgloss.Left, fg(pal.Warn), ground) +
 		lipgloss.JoinHorizontal(lipgloss.Top,
 			a.indexCell(i+1, ground, focus == fIndex),
-			a.clockCell(it.Start, fg(pal.Start), ground, focus == fStartHour, focus == fStartMinute, " -") +
-			a.clockCell(it.End, fg(pal.End), ground, focus == fEndHour, focus == fEndMinute, "  "),
+			a.clockCell(it.Start, fg(pal.Start), ground, focus == fStartHour, focus == fStartMinute, " -")+
+				a.clockCell(it.End, fg(pal.End), ground, focus == fEndHour, focus == fEndMinute, "  "),
 			a.durationCell(it, ground, focus == fDurHour, focus == fDurMinute),
 			a.contentCell(it, ground, selected, selected && l.editing),
 		)
@@ -799,7 +799,7 @@ func (a *App) contentCell(it store.Item, ground lipgloss.TerminalColor, selected
 }
 
 func (a *App) renderTitle() string {
-	left := titleStyle.Render("\uf073 ") + titleStyle.Render(a.date + " " + store.Weekday(a.date))
+	left := titleStyle.Render("\uf073 ") + titleStyle.Render(a.date+" "+store.Weekday(a.date))
 
 	right := ""
 	if day := a.day(); day != nil && len(day.Items) > 0 {

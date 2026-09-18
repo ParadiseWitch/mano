@@ -24,10 +24,10 @@ type dateState struct {
 	search    textinput.Model
 
 	// Calendar view
-	calMode     bool   // true = calendar view, false = list view
-	calYear     int    // displayed year
-	calMonth    int    // displayed month (1-12)
-	calCursor   string // selected date in calendar mode
+	calMode   bool   // true = calendar view, false = list view
+	calYear   int    // displayed year
+	calMonth  int    // displayed month (1-12)
+	calCursor string // selected date in calendar mode
 }
 
 func newDateState() dateState {
