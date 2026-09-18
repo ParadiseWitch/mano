@@ -1718,14 +1718,14 @@ func TestTheHintBarDescribesTheStopItSitsOn(t *testing.T) {
 		stop int
 		want string
 	}{
-		{fIndex, "序号 j/k 换项 J/K 挪本项 Tab 换列 ? 帮助 Esc 回内容"},
+		{fIndex, "\uf0cb 序号 j/k 换项 J/K 挪本项 Tab 换列 ? 帮助 Esc 回内容"},
 		{fStartHour, "开始 小时 | ↑ 加 ↓ 减 每次 1 循环 | 数字 十位→个位 s 现在 | Tab 换列 Esc 回内容"},
 		{fStartMinute, "开始 分钟 | ↑ 加 ↓ 减 每次 5 循环 | 数字 十位→个位 s 现在 | Tab 换列 Esc 回内容"},
 		{fEndHour, "结束 小时 | ↑ 加 ↓ 减 每次 1 循环 | 数字 十位→个位 s 现在 | Tab 换列 Esc 回内容"},
 		{fEndMinute, "结束 分钟 | ↑ 加 ↓ 减 每次 5 循环 | 数字 十位→个位 s 现在 | Tab 换列 Esc 回内容"},
 		{fDurHour, "耗时 小时 | ↑ 加 ↓ 减 每次 1 循环 | 数字 写回结束时间 | Tab 换列 Esc 回内容"},
 		{fDurMinute, "耗时 分钟 | ↑ 加 ↓ 减 每次 5 循环 | 数字 写回结束时间 | Tab 换列 Esc 回内容"},
-		{fContent, "内容 j/k 换项 J/K 挪本项 Tab 换列 i 编辑 o 新建 dd 删 y/p 复制 c 日期 q 退出"},
+		{fContent, "\uf044 内容 j/k 换项 J/K 挪本项 Tab 换列 i 编辑 o 新建 dd 删 y/p 复制 c 日期 q 退出"},
 	}
 
 	for _, c := range cases {
@@ -1740,7 +1740,7 @@ func TestTheHintBarDescribesTheStopItSitsOn(t *testing.T) {
 			if !strings.HasPrefix(hints, c.want) {
 				t.Errorf("hint bar %q does not carry the hint %q", hints, c.want)
 			}
-			if !strings.HasPrefix(hints, stopNames[c.stop]) {
+			if !strings.Contains(hints, stopNames[c.stop]) {
 				t.Errorf("hint bar %q does not name the stop it describes", hints)
 			}
 		})
@@ -1752,7 +1752,7 @@ func TestTheHintBarDescribesTheStopItSitsOn(t *testing.T) {
 
 		send(t, a, ch('a'))
 
-		if got := a.stopHints(); got != "编辑 | Enter 或 Esc 完成" {
+		if got := a.stopHints(); got != "\uf044 编辑 | Enter 或 Esc 完成" {
 			t.Errorf("hint while editing = %q", got)
 		}
 		if hints := ansi.Strip(a.renderStatus()); !strings.Contains(hints, "编辑") {

@@ -254,7 +254,7 @@ func (a *App) viewDates() string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		spread(a.width, titleStyle.Render("选择日期"), dimStyle.Render(a.dateCount())),
+		spread(a.width, titleStyle.Render("\uf073 选择日期"), dimStyle.Render(a.dateCount())),
 		divider(a.width),
 		lipgloss.JoinVertical(lipgloss.Left, rows...),
 		divider(a.width),

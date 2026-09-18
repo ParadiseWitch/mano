@@ -664,7 +664,7 @@ func (a *App) viewLog() string {
 }
 
 func (a *App) emptyRow() string {
-	hint := "今日暂无记录，按 o 新建"
+	hint := "\uf466 今日暂无记录，按 o 新建"
 	lead := clamp(a.width-lipgloss.Width(hint), colMark, fixedWidth)
 	return cell(strings.Repeat(" ", lead)+hint, a.width, lipgloss.Left, fg(pal.Dim), transparent)
 }
@@ -798,7 +798,7 @@ func (a *App) contentCell(it store.Item, ground lipgloss.TerminalColor, selected
 }
 
 func (a *App) renderTitle() string {
-	left := titleStyle.Render(a.date + " " + store.Weekday(a.date))
+	left := titleStyle.Render("\uf073 ") + titleStyle.Render(a.date + " " + store.Weekday(a.date))
 
 	right := ""
 	if day := a.day(); day != nil && len(day.Items) > 0 {
@@ -831,15 +831,15 @@ func (a *App) stopHints() string {
 	l := &a.log
 
 	if l.editing {
-		return "编辑 | Enter 或 Esc 完成"
+		return "\uf044 编辑 | Enter 或 Esc 完成"
 	}
 
 	name := stopNames[l.field]
 	switch l.field {
 	case fContent:
-		return "内容 j/k 换项 J/K 挪本项 Tab 换列 i 编辑 o 新建 dd 删 y/p 复制 c 日期 q 退出"
+		return "\uf044 内容 j/k 换项 J/K 挪本项 Tab 换列 i 编辑 o 新建 dd 删 y/p 复制 c 日期 q 退出"
 	case fIndex:
-		return "序号 j/k 换项 J/K 挪本项 Tab 换列 ? 帮助 Esc 回内容"
+		return "\uf0cb 序号 j/k 换项 J/K 挪本项 Tab 换列 ? 帮助 Esc 回内容"
 	}
 
 	// The clock stops take one half of a reading at a time and can be filled from

@@ -139,7 +139,7 @@ func (a *App) viewHelp() string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		spread(a.width, titleStyle.Render("快捷键"), dimStyle.Render("orgmaid")),
+		spread(a.width, titleStyle.Render("\uf128 快捷键"), dimStyle.Render("orgmaid")),
 		divider(a.width),
 		lipgloss.JoinVertical(lipgloss.Left, window...),
 		divider(a.width),
