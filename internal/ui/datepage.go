@@ -549,10 +549,10 @@ func (a *App) viewCalendar() string {
 						Underline(true)
 					text = fmt.Sprintf("%2d", day)
 				} else if hasEntry {
-					// Has entries: show with a dot indicator below
+					// Has entries: use combining dot below (U+0323)
 					style = lipgloss.NewStyle().
 						Foreground(fg(pal.Start))
-					text = fmt.Sprintf("%2d", day)
+					text = fmt.Sprintf("%2d\u0323", day)
 				} else {
 					style = lipgloss.NewStyle().
 						Foreground(fg(pal.Text))
@@ -565,25 +565,6 @@ func (a *App) viewCalendar() string {
 			}
 		}
 		rows = append(rows, weekLine.String())
-
-		// Add indicator row for dots (today underline is handled above)
-		var indicatorLine strings.Builder
-		indicatorLine.WriteString(leftPad)
-		dayInWeek := 1 + week*7
-		for dow := 0; dow < 7; dow++ {
-			actualDay := dayInWeek + dow
-			if (week == 0 && dow < firstDay) || actualDay > totalDays {
-				indicatorLine.WriteString("   ")
-			} else {
-				dateStr := formatDate(year, month, actualDay)
-				if d.hasEntry(dateStr) && dateStr != store.Today() {
-					indicatorLine.WriteString(lipgloss.NewStyle().Foreground(fg(pal.Start)).Render("·") + "  ")
-				} else {
-					indicatorLine.WriteString("   ")
-				}
-			}
-		}
-		rows = append(rows, indicatorLine.String())
 	}
 
 	// Fill remaining rows to maintain height
