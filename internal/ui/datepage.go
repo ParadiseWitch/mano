@@ -119,9 +119,6 @@ func (a *App) updateDates(k tea.KeyMsg) tea.Cmd {
 			case 'J':
 				d.moveCalendar(7)
 				return nil
-			case '\t':
-				d.calMode = false
-				return nil
 			case 'q':
 				return tea.Quit
 			case '?':
@@ -134,6 +131,9 @@ func (a *App) updateDates(k tea.KeyMsg) tea.Cmd {
 			}
 		}
 		switch k.Type {
+		case tea.KeyTab:
+			d.calMode = false
+			return nil
 		case tea.KeyEnter:
 			a.enterDay(d.calCursor)
 			return nil
@@ -172,13 +172,13 @@ func (a *App) updateDates(k tea.KeyMsg) tea.Cmd {
 		case 'c':
 			a.enterDay(a.date)
 			return nil
-		case '\t':
-			d.calMode = true
-			return nil
 		}
 	}
 
 	switch k.Type {
+	case tea.KeyTab:
+		d.calMode = true
+		return nil
 	case tea.KeyDown:
 		a.moveDate(1)
 	case tea.KeyUp:
