@@ -6,6 +6,8 @@
 
 像程序日志一样记录自己的各项事务和耗时。数据存为 org-mode 格式，纯文本，随时可以用 Emacs 或其他编辑器打开。
 
+**名字来源**：org-mode + maid，一个帮你打理 org-mode 日志的小助手。
+
 <p align="center">
   <img src="docs/screenshot.png" alt="orgmaid 运行截图" width="720">
 </p>
@@ -103,15 +105,18 @@ orgmaid -file ~/notes/time.org # 换一个数据文件
 ** 日志事项1内容
    - START: 09:00
    - END: 10:21
-** 日志事项2内容
+** TODO 写周报                                                      :work:
    - START: 10:30
    - END: 11:21
+** DONE 买菜                                                        :life:
 
 * 2026-08-02
 ** 只写了内容，没有时间
 ```
 
-`- START:` 和 `- END:` 都是可选的，缺哪个就不写哪一行。
+- `- START:` 和 `- END:` 都是可选的，缺哪个就不写哪一行
+- `TODO` / `DONE` 是可选的状态关键字
+- `:tag1:tag2:` 是可选的标签，写在行末
 
 ## 开发
 
