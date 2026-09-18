@@ -508,15 +508,6 @@ func (a *App) viewCalendar() string {
 	}
 	titleRow := strings.Repeat(" ", headerLeft) + header
 
-	// Key hints below the header
-	hints := dimStyle.Render("h/l 前后天 | j/k 上下周 | H/L 上下月 | s 今天 | Tab 列表")
-	hintsWidth := lipgloss.Width(hints)
-	hintsLeft := (a.width - hintsWidth) / 2
-	if hintsLeft < 0 {
-		hintsLeft = 0
-	}
-	hintsRow := strings.Repeat(" ", hintsLeft) + hints
-
 	// Weekday headers - centered
 	weekdays := "日 一 二 三 四 五 六"
 	weekdayRow := leftPad + dimStyle.Render(weekdays)
@@ -527,7 +518,6 @@ func (a *App) viewCalendar() string {
 
 	var rows []string
 	rows = append(rows, titleRow)
-	rows = append(rows, hintsRow)
 	rows = append(rows, divider(a.width))
 	rows = append(rows, weekdayRow)
 
