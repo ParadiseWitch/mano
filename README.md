@@ -10,6 +10,7 @@
 
 <p align="center">
   <img src="docs/screenshot.png" alt="orgmaid 运行截图" width="720">
+  <img src="docs/date.png" alt="orgmaid 运行截图" width="720">
 </p>
 
 在 herdr 中使用：
