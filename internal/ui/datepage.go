@@ -140,6 +140,18 @@ func (a *App) updateDates(k tea.KeyMsg) tea.Cmd {
 		case tea.KeyTab:
 			d.calMode = false
 			return nil
+		case tea.KeyLeft:
+			d.moveCalendar(-1)
+			return nil
+		case tea.KeyRight:
+			d.moveCalendar(1)
+			return nil
+		case tea.KeyDown:
+			d.moveCalendar(7)
+			return nil
+		case tea.KeyUp:
+			d.moveCalendar(-7)
+			return nil
 		case tea.KeyEnter:
 			a.enterDay(d.calCursor)
 			return nil
@@ -417,7 +429,7 @@ func (a *App) renderDateStatus() string {
 
 	var hints string
 	if d.calMode {
-		hints = "日历 | h/l 前后天 | j/k 上下周 | H/L 上下月 | s 今天 | Tab 返回列表 | Enter 打开 | Esc 返回 | q 退出"
+		hints = "日历 | h/l/←/→ 前后天 | j/k/↓/↑ 上下周 | H/L 上下月 | s 今天 | Tab 返回列表 | Enter 打开 | Esc 返回 | q 退出"
 	} else {
 		hints = "列表 | j/k 选择 | h/l 翻页 | / 搜索 | Tab 切换日历 | Enter 打开 | Esc 返回 | ? 帮助 | q 退出"
 	}
