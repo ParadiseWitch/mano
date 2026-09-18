@@ -16,12 +16,13 @@ import (
 const (
 	colMark     = 2 // selection marker plus the space after it
 	colIndex    = 3
+	colTodo     = 5 // TODO/DONE status
 	colTime     = 8
 	colDuration = 8
 	rowMargin   = 1
 
 	// fixedWidth is every cell left of the content column, marker included.
-	fixedWidth = colMark + colIndex + colTime*2 + colDuration
+	fixedWidth = colMark + colIndex + colTodo + colTime*2 + colDuration
 )
 
 // pal is the live palette: the shipped defaults until Apply reads the user's

@@ -774,20 +774,14 @@ func (a *App) renderRow(i int, it store.Item) string {
 	}
 
 	mark := " "
-	markColor := fg(pal.Warn)
 	if selected {
 		mark = "\uf0da"
-	} else if it.Todo == "TODO" {
-		mark = "\uf111"
-		markColor = fg(pal.Warn)
-	} else if it.Todo == "DONE" {
-		mark = "\uf00c"
-		markColor = fg(pal.Start)
 	}
 
-	row := cell(mark, colMark, lipgloss.Left, markColor, ground) +
+	row := cell(mark, colMark, lipgloss.Left, fg(pal.Warn), ground) +
 		lipgloss.JoinHorizontal(lipgloss.Top,
 			a.indexCell(i+1, ground, focus == fIndex),
+			a.todoCell(it.Todo, ground),
 			a.clockCell(it.Start, fg(pal.Start), ground, focus == fStartHour, focus == fStartMinute, " -")+
 				a.clockCell(it.End, fg(pal.End), ground, focus == fEndHour, focus == fEndMinute, "  "),
 			a.durationCell(it, ground, focus == fDurHour, focus == fDurMinute),
@@ -803,6 +797,21 @@ func (a *App) indexCell(n int, ground lipgloss.TerminalColor, active bool) strin
 	return cell(strconv.Itoa(n)+".", colIndex, lipgloss.Right,
 		choose(active, fg(pal.Ink), fg(pal.Index)),
 		choose(active, bg(pal.Field), ground))
+}
+
+// todoCell shows the TODO/DONE status in its own column.
+func (a *App) todoCell(todo string, ground lipgloss.TerminalColor) string {
+	text := ""
+	col := fg(pal.Dim)
+	switch todo {
+	case "TODO":
+		text = "TODO"
+		col = fg(pal.Warn)
+	case "DONE":
+		text = "DONE"
+		col = fg(pal.Start)
+	}
+	return cell(text, colTodo, lipgloss.Left, col, ground)
 }
 
 // clockCell is one of the two time columns: the reading in its own accent with a
