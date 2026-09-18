@@ -184,6 +184,7 @@ func (a *App) rowCommand(r rune) (tea.Cmd, bool) {
 		return tea.Quit, true
 	case '?':
 		a.page = pageHelp
+			a.helpFrom = helpFromLog
 	default:
 		return nil, false
 	}

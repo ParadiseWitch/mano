@@ -14,9 +14,18 @@ type helpEntry struct {
 	desc string
 }
 
+// helpContext tracks which page the help was opened from
+type helpContext int
+
+const (
+	helpFromLog  helpContext = iota
+	helpFromDate
+)
+
 var helpSections = []struct {
 	title   string
 	entries []helpEntry
+	context helpContext // which page this section applies to
 }{
 	{"日志页 | 内容列（默认停在这里）", []helpEntry{
 		{"j / k", "下移、上移一项（上下方向键同效）"},
@@ -33,7 +42,7 @@ var helpSections = []struct {
 		{"c", "打开日期选择页"},
 		{"?", "打开本页"},
 		{"q", "退出 orgmaid"},
-	}},
+	}, helpFromLog},
 	{"日志页 | 一行的八个停靠点", []helpEntry{
 		{"Tab", "在停靠点之间移动，两端环绕（Shift+Tab 反向）"},
 		{"停靠点", "序号 / 开始 / 结束 / 耗时 各按时、分两格，共八格，最后是内容"},
@@ -48,29 +57,41 @@ var helpSections = []struct {
 		{"耗时列 ↑ / ↓", "加减与填数字都写回结束时间，需要先有开始时间"},
 		{"Enter / Esc", "从其他停靠点回到内容列（在内容列上 Enter 是编辑）"},
 		{"行命令", "i a o dd y p c G J K ? q 在任何停靠点上都能按"},
-	}},
+	}, helpFromLog},
 	{"日志页 | 编辑模式", []helpEntry{
 		{"左右键", "移动光标"},
 		{"Backspace", "删除光标前一个字符"},
 		{"Enter / Esc", "提交并回到内容列"},
-	}},
-	{"日期选择页", []helpEntry{
+	}, helpFromLog},
+	{"日期选择页 | 列表模式", []helpEntry{
 		{"j / k", "下移、上移一个日期（上下方向键同效）"},
 		{"h / l", "上一页、下一页（左右方向键同效）"},
 		{"/", "开始搜索，边输入边过滤"},
+		{"Tab", "切换到日历视图"},
 		{"Enter", "打开选中的日期"},
 		{"c / Esc", "返回日志页"},
-	}},
+		{"?", "打开本页"},
+		{"q", "退出 orgmaid"},
+	}, helpFromDate},
+	{"日期选择页 | 日历模式", []helpEntry{
+		{"j / k", "上/下周同一天"},
+		{"h / l", "上/下个月"},
+		{"H / L", "前/后一天"},
+		{"Tab", "切换回列表视图"},
+		{"Enter", "打开选中的日期"},
+		{"Esc", "返回日志页"},
+		{"q", "退出 orgmaid"},
+	}, helpFromDate},
 	{"搜索与新建日期", []helpEntry{
 		{"2026-08", "按日期过滤，紧凑写法 202608 同样有效"},
 		{"关键词", "按日志内容过滤，找出写过该词的日子"},
 		{"20260801", "输入一个没有记录的完整日期，Enter 直接新建"},
 		{"Esc", "清空搜索并取消"},
-	}},
+	}, helpFromDate},
 	{"通用", []helpEntry{
 		{"Ctrl+C", "在任意页面强制退出"},
 		{"", "所有修改即时写入 ~/.orgmaid/orgmaid.org，退出无需保存"},
-	}},
+	}, -1}, // -1 means always show
 }
 
 const helpKeyWidth = 14
@@ -120,14 +141,14 @@ func (a *App) updateHelp(k tea.KeyMsg) tea.Cmd {
 }
 
 func (a *App) maxHelpOffset() int {
-	if n := len(helpLines(a.width)) - a.listHeight(); n > 0 {
+	if n := len(a.helpLines(a.width)) - a.listHeight(); n > 0 {
 		return n
 	}
 	return 0
 }
 
 func (a *App) viewHelp() string {
-	lines := helpLines(a.width)
+	lines := a.helpLines(a.width)
 	height := a.listHeight()
 
 	window := make([]string, 0, height)
@@ -148,13 +169,18 @@ func (a *App) viewHelp() string {
 	)
 }
 
-func helpLines(width int) []string {
+func (a *App) helpLines(width int) []string {
 	sectionStyle := lipgloss.NewStyle().Bold(true).
 		Foreground(fg(pal.Warn))
 	descWidth := width - rowMargin - helpKeyWidth - 2
 
 	var lines []string
 	for _, section := range helpSections {
+		// Filter sections based on context
+		if section.context != -1 && section.context != a.helpFrom {
+			continue
+		}
+
 		if len(lines) > 0 {
 			lines = append(lines, "")
 		}

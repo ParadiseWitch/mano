@@ -7,6 +7,16 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// testApp creates a minimal App for testing help functions
+func testApp() *App {
+	return &App{helpFrom: helpFromLog}
+}
+
+// testAppDate creates a minimal App for testing date help
+func testAppDate() *App {
+	return &App{helpFrom: helpFromDate}
+}
+
 // The help page is the only place a key is explained at length, so a line cut at
 // the right edge hides the very key a reader is looking for.
 func TestEveryHelpLineFitsAnEightyColumnTerminal(t *testing.T) {
@@ -18,10 +28,14 @@ func TestEveryHelpLineFitsAnEightyColumnTerminal(t *testing.T) {
 		}
 	}
 
-	lines := helpLines(width)
-	for i, line := range lines {
-		if w := lipgloss.Width(line); w > width {
-			t.Errorf("第 %d 行占 %d 格，超过 %d：%s", i+1, w, width, strings.TrimSpace(line))
+	// Test both contexts
+	for _, ctx := range []helpContext{helpFromLog, helpFromDate} {
+		a := &App{helpFrom: ctx}
+		lines := a.helpLines(width)
+		for i, line := range lines {
+			if w := lipgloss.Width(line); w > width {
+				t.Errorf("上下文 %d 第 %d 行占 %d 格，超过 %d：%s", ctx, i+1, w, width, strings.TrimSpace(line))
+			}
 		}
 	}
 }
@@ -29,15 +43,23 @@ func TestEveryHelpLineFitsAnEightyColumnTerminal(t *testing.T) {
 // A description that no row of the rendered page carries in full was cut by fit,
 // which is exactly what the line width test cannot see on its own.
 func TestNoHelpEntryIsCutShort(t *testing.T) {
-	lines := strings.Join(helpLines(80), "\n")
+	// Test both contexts
+	for _, ctx := range []helpContext{helpFromLog, helpFromDate} {
+		a := &App{helpFrom: ctx}
+		lines := strings.Join(a.helpLines(80), "\n")
 
-	for _, section := range helpSections {
-		for _, entry := range section.entries {
-			if entry.desc == "" {
+		for _, section := range helpSections {
+			// Skip sections not in this context
+			if section.context != -1 && section.context != ctx {
 				continue
 			}
-			if !strings.Contains(lines, entry.desc) {
-				t.Errorf("说明被截断了：%q（键 %q）", entry.desc, entry.key)
+			for _, entry := range section.entries {
+				if entry.desc == "" {
+					continue
+				}
+				if !strings.Contains(lines, entry.desc) {
+					t.Errorf("上下文 %d 说明被截断了：%q（键 %q）", ctx, entry.desc, entry.key)
+				}
 			}
 		}
 	}

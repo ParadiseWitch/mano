@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -21,6 +22,12 @@ type dateState struct {
 	offset    int
 	searching bool
 	search    textinput.Model
+
+	// Calendar view
+	calMode     bool   // true = calendar view, false = list view
+	calYear     int    // displayed year
+	calMonth    int    // displayed month (1-12)
+	calCursor   string // selected date in calendar mode
 }
 
 func newDateState() dateState {
@@ -63,6 +70,17 @@ func (d *dateState) reset(j store.Journal, current string) {
 			break
 		}
 	}
+
+	// Initialize calendar to current date's month
+	if current != "" {
+		d.calYear, d.calMonth, _ = parseDateParts(current)
+	} else {
+		d.calYear, d.calMonth, _ = parseDateParts(today)
+	}
+	d.calCursor = current
+	if d.calCursor == "" {
+		d.calCursor = today
+	}
 }
 
 func (a *App) updateDates(k tea.KeyMsg) tea.Cmd {
@@ -73,6 +91,62 @@ func (a *App) updateDates(k tea.KeyMsg) tea.Cmd {
 		return a.updateDateSearch(k)
 	}
 
+	// Calendar mode navigation
+	if d.calMode {
+		if r, ok := keys.SingleRune(k); ok {
+			switch r {
+			case 'h':
+				d.moveCalendarMonth(-1)
+				return nil
+			case 'l':
+				d.moveCalendarMonth(1)
+				return nil
+			case 'j':
+				d.moveCalendar(7)
+				return nil
+			case 'k':
+				d.moveCalendar(-7)
+				return nil
+			case 'H':
+				d.moveCalendar(-1)
+				return nil
+			case 'L':
+				d.moveCalendar(1)
+				return nil
+			case 'K':
+				d.moveCalendar(-7)
+				return nil
+			case 'J':
+				d.moveCalendar(7)
+				return nil
+			case '\t':
+				d.calMode = false
+				return nil
+			case 'q':
+				return tea.Quit
+			case '?':
+				a.page = pageHelp
+				a.helpFrom = helpFromDate
+				return nil
+			case 'c':
+				a.enterDay(d.calCursor)
+				return nil
+			}
+		}
+		switch k.Type {
+		case tea.KeyEnter:
+			a.enterDay(d.calCursor)
+			return nil
+		case tea.KeyEsc:
+			a.enterDay(a.date)
+			return nil
+		case tea.KeyCtrlC:
+			return tea.Quit
+		}
+		return nil
+	}
+
+	// List mode navigation
 	if r, ok := keys.SingleRune(k); ok {
 		switch r {
 		case 'j':
@@ -93,9 +167,13 @@ func (a *App) updateDates(k tea.KeyMsg) tea.Cmd {
 			return tea.Quit
 		case '?':
 			a.page = pageHelp
+			a.helpFrom = helpFromDate
 			return nil
 		case 'c':
 			a.enterDay(a.date)
+			return nil
+		case '\t':
+			d.calMode = true
 			return nil
 		}
 	}
@@ -240,6 +318,17 @@ func (d *dateState) scrollSelectedIntoView(height int) {
 
 func (a *App) viewDates() string {
 	d := &a.dates
+
+	// Calendar view
+	if d.calMode {
+		return lipgloss.JoinVertical(lipgloss.Left,
+			a.viewCalendar(),
+			divider(a.width),
+			a.renderDateStatus(),
+		)
+	}
+
+	// List view
 	height := a.listHeight()
 
 	rows := make([]string, 0, height)
@@ -320,7 +409,13 @@ func (a *App) renderDateRow(i int) string {
 func (a *App) renderDateStatus() string {
 	d := &a.dates
 
-	hints := "日期 | j/k 选择 | h/l 翻页 | / 搜索 | Enter 打开 | Esc 返回 | ? 帮助 | q 退出"
+	var hints string
+	if d.calMode {
+		hints = "日历 | j/k 上下周 | h/l 上下月 | H/L 前一天/后一天 | Tab 返回列表 | Enter 打开 | Esc 返回 | q 退出"
+	} else {
+		hints = "列表 | j/k 选择 | h/l 翻页 | / 搜索 | Tab 切换日历 | Enter 打开 | Esc 返回 | ? 帮助 | q 退出"
+	}
+
 	if d.searching {
 		hints = "搜索 | " + d.search.View() + " | Enter 打开 | Esc 取消"
 		if missing := d.newDate(d.search.Value()); missing != "" {
@@ -331,4 +426,162 @@ func (a *App) renderDateStatus() string {
 	}
 
 	return statusStyle.Width(a.width).Render(fit(hints, a.width))
+}
+
+// parseDateParts extracts year, month, day from a date string like "2026-09-18"
+func parseDateParts(date string) (year, month, day int) {
+	if len(date) < 10 {
+		return 2026, 1, 1
+	}
+	fmt.Sscanf(date, "%d-%d-%d", &year, &month, &day)
+	return
+}
+
+// formatDate creates a date string from year, month, day
+func formatDate(year, month, day int) string {
+	return fmt.Sprintf("%04d-%02d-%02d", year, month, day)
+}
+
+// daysInMonth returns the number of days in a given month/year
+func daysInMonth(year, month int) int {
+	switch month {
+	case 1, 3, 5, 7, 8, 10, 12:
+		return 31
+	case 4, 6, 9, 11:
+		return 30
+	case 2:
+		if year%4 == 0 && (year%100 != 0 || year%400 == 0) {
+			return 29
+		}
+		return 28
+	}
+	return 30
+}
+
+// firstDayOfMonth returns the weekday (0=Sunday, 6=Saturday) of the first day of the month
+func firstDayOfMonth(year, month int) int {
+	// Using Zeller's formula simplified
+	t := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	return int(t.Weekday())
+}
+
+// monthName returns the Chinese name of a month
+func monthName(month int) string {
+	names := []string{"一月", "二月", "三月", "四月", "五月", "六月",
+		"七月", "八月", "九月", "十月", "十一月", "十二月"}
+	if month >= 1 && month <= 12 {
+		return names[month-1]
+	}
+	return ""
+}
+
+// hasEntry checks if a date has any entries
+func (d *dateState) hasEntry(date string) bool {
+	return d.counts[date] > 0
+}
+
+// viewCalendar renders the calendar view
+func (a *App) viewCalendar() string {
+	d := &a.dates
+	year, month := d.calYear, d.calMonth
+
+	// Header with month/year and navigation hints
+	header := titleStyle.Render(fmt.Sprintf("\uf073 %d年 %s", year, monthName(month)))
+	right := dimStyle.Render("h/l 切换月份 | Tab 返回列表视图")
+	titleRow := spread(a.width, header, right)
+
+	// Weekday headers
+	weekdays := "日  一  二  三  四  五  六"
+	weekdayRow := cell(weekdays, a.width, lipgloss.Center, fg(pal.Dim), transparent)
+
+	// Calculate calendar grid
+	firstDay := firstDayOfMonth(year, month)
+	totalDays := daysInMonth(year, month)
+
+	var rows []string
+	rows = append(rows, titleRow)
+	rows = append(rows, divider(a.width))
+	rows = append(rows, weekdayRow)
+
+	// Build weeks
+	day := 1
+	for week := 0; week < 6 && day <= totalDays; week++ {
+		var weekCells []string
+		for dow := 0; dow < 7; dow++ {
+			if (week == 0 && dow < firstDay) || day > totalDays {
+				weekCells = append(weekCells, cell("  ", 2, lipgloss.Center, fg(pal.Dim), transparent))
+			} else {
+				dateStr := formatDate(year, month, day)
+				isToday := dateStr == store.Today()
+				isSelected := dateStr == d.calCursor
+				hasEntry := d.hasEntry(dateStr)
+
+				var style lipgloss.Style
+				var text string
+
+				if isSelected {
+					style = lipgloss.NewStyle().
+						Background(bg(pal.Field)).
+						Foreground(fg(pal.Ink)).
+						Bold(true)
+					text = fmt.Sprintf("%2d", day)
+				} else if isToday {
+					style = lipgloss.NewStyle().
+						Foreground(fg(pal.Warn)).
+						Bold(true)
+					text = fmt.Sprintf("%2d", day)
+				} else if hasEntry {
+					style = lipgloss.NewStyle().
+						Foreground(fg(pal.Start))
+					text = fmt.Sprintf("%2d", day)
+				} else {
+					style = lipgloss.NewStyle().
+						Foreground(fg(pal.Text))
+					text = fmt.Sprintf("%2d", day)
+				}
+
+				weekCells = append(weekCells, style.Render(text))
+				day++
+			}
+		}
+		rows = append(rows, strings.Join(weekCells, " "))
+	}
+
+	// Fill remaining rows to maintain height
+	targetHeight := a.height - 4
+	for len(rows) < targetHeight {
+		rows = append(rows, "")
+	}
+
+	// Add info about selected date
+	if d.calCursor != "" {
+		count := d.counts[d.calCursor]
+		weekday := store.Weekday(d.calCursor)
+		info := fmt.Sprintf("%s %s | %d 项", d.calCursor, weekday, count)
+		if d.calCursor == store.Today() {
+			info += " (今天)"
+		}
+		rows = append(rows, divider(a.width))
+		rows = append(rows, cell(info, a.width, lipgloss.Center, fg(pal.Dim), transparent))
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, rows...)
+}
+
+// moveCalendar moves the calendar cursor by delta days
+func (d *dateState) moveCalendar(deltaDays int) {
+	t, _ := time.Parse("2006-01-02", d.calCursor)
+	t = t.AddDate(0, 0, deltaDays)
+	d.calCursor = t.Format("2006-01-02")
+	d.calYear = t.Year()
+	d.calMonth = int(t.Month())
+}
+
+// moveCalendarMonth moves the calendar by months
+func (d *dateState) moveCalendarMonth(deltaMonths int) {
+	t, _ := time.Parse("2006-01-02", d.calCursor)
+	t = t.AddDate(0, deltaMonths, 0)
+	d.calCursor = t.Format("2006-01-02")
+	d.calYear = t.Year()
+	d.calMonth = int(t.Month())
 }

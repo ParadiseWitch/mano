@@ -39,6 +39,7 @@ type App struct {
 	log        logState
 	dates      dateState
 	helpOffset int
+	helpFrom   helpContext // which page help was opened from
 }
 
 // New builds an app showing date on the log page. colors is the palette to draw

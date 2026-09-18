@@ -54,7 +54,7 @@ func buildStyles() {
 	titleStyle = lipgloss.NewStyle().Bold(true).Foreground(fg(pal.Title))
 	dimStyle = lipgloss.NewStyle().Foreground(fg(pal.Dim))
 	warnStyle = lipgloss.NewStyle().Foreground(fg(pal.Warn))
-	statusStyle = lipgloss.NewStyle().Background(bg(pal.Status)).Foreground(fg(pal.Dim))
+	statusStyle = lipgloss.NewStyle().Foreground(fg(pal.Dim))
 }
 
 // apply takes over the colours from the config file.
