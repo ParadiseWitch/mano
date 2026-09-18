@@ -812,28 +812,33 @@ func (a *App) indexCell(n int, ground lipgloss.TerminalColor, active bool) strin
 func (a *App) todoCell(todo string, ground lipgloss.TerminalColor, active bool) string {
 	text := ""
 	col := fg(pal.Dim)
-	todoGround := ground
+	var todoBg lipgloss.TerminalColor = ground
 	switch todo {
 	case "TODO":
-		text = " TODO "
+		text = "TODO"
 		col = fg(pal.Ink)
 		if active {
-			todoGround = bg(pal.Start)
+			todoBg = bg(pal.Start)
 		} else {
-			todoGround = bg("#3b6a9b")
+			todoBg = bg("#5b8abf")
 		}
 	case "DONE":
-		text = " DONE "
+		text = "DONE"
 		col = fg(pal.Ink)
 		if active {
-			todoGround = bg(pal.Crossed)
+			todoBg = bg(pal.Crossed)
 		} else {
-			todoGround = bg("#4a7a5a")
+			todoBg = bg("#6aaa7a")
 		}
 	default:
-		text = "      "
+		return cell("      ", colTodo, lipgloss.Center, col, ground)
 	}
-	return cell(text, colTodo, lipgloss.Center, col, todoGround)
+	// Render the text with background, then pad to column width
+	styled := lipgloss.NewStyle().
+		Foreground(col).
+		Background(todoBg).
+		Render(text)
+	return cell(styled, colTodo, lipgloss.Center, fg(pal.Text), ground)
 }
 
 // clockCell is one of the two time columns: the reading in its own accent with a
