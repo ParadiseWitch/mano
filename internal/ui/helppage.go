@@ -108,7 +108,11 @@ func (a *App) updateHelp(k tea.KeyMsg) tea.Cmd {
 		case 'k':
 			step = -1
 		case 'q', '?':
-			a.page = pageLog
+			if a.helpFrom == helpFromDate {
+				a.page = pageDates
+			} else {
+				a.page = pageLog
+			}
 			return nil
 		}
 	}
@@ -129,7 +133,11 @@ func (a *App) updateHelp(k tea.KeyMsg) tea.Cmd {
 		a.helpOffset = a.maxHelpOffset()
 		return nil
 	case tea.KeyEsc:
-		a.page = pageLog
+		if a.helpFrom == helpFromDate {
+			a.page = pageDates
+		} else {
+			a.page = pageLog
+		}
 		return nil
 	case tea.KeyCtrlC:
 		return tea.Quit
